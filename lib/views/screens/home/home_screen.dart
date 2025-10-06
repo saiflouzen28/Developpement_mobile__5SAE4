@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/constant/app_route.dart'; // assure-toi que AppRoute.signIn existe
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -6,7 +8,30 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Accueil')),
+      appBar: AppBar(
+        title: const Text('Accueil'),
+       /* actions: [
+          // Bouton pour aller à la page login
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              // Naviguer vers la page login
+              Navigator.pushReplacementNamed(context, AppRoute.signIn);
+            },
+          ),
+        ],*/
+
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.clear(); // supprime toutes les données
+              Navigator.pushReplacementNamed(context, AppRoute.signIn);
+            },
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -50,7 +75,6 @@ class HomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
 
-          // Cartes simples réutilisables
           Card(
             child: ListTile(
               leading: const CircleAvatar(child: Icon(Icons.folder)),

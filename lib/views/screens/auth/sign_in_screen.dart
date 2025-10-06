@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../DB/database_helper.dart';
 import '../../../core/constant/app_color.dart';
 import '../../../core/constant/app_string.dart';
 import '../../../core/constant/app_style.dart';
@@ -6,6 +7,7 @@ import '../../../core/constant/app_route.dart';
 import '../../widgets/forms/common_input_decoration.dart';
 import '../../widgets/buttons/primary_button.dart';
 import '../../widgets/buttons/social_button.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -18,19 +20,36 @@ class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  final String staticEmail = 'user@example.com';
-  final String staticPassword = '123456';
+  void _handleLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
 
-  void _handleLogin() {
-    final enteredEmail = _emailController.text.trim();
-    final enteredPassword = _passwordController.text;
+    final user = await DatabaseHelper.instance.loginUser(email, password);
 
-    if (enteredEmail == staticEmail && enteredPassword == staticPassword) {
-      Navigator.pushReplacementNamed(context, AppRoute.home);
-    } else {
+    if (user != null) {
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('userId', user['id']);
+      await prefs.setString('userNom', user['nom']);
+      await prefs.setString('userPrenom', user['prenom']);
+      await prefs.setString('userEmail', user['email']);
+
+
+
+
+      // Connexion réussie
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Adresse e-mail ou mot de passe invalide'),
+          content: Text('Connexion réussie ✅'),
+          backgroundColor: AppColor.black,
+        ),
+      );
+      Navigator.pushReplacementNamed(context, AppRoute.home);
+    } else {
+      // Erreur login
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Adresse e-mail ou mot de passe invalide ❌'),
           backgroundColor: AppColor.red,
         ),
       );
@@ -75,7 +94,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
               Center(
                 child: TextButton(
-                  onPressed: () => Navigator.pushNamed(context, AppRoute.forgotPassword),
+                  onPressed: () => Navigator.pushNamed(context, AppRoute.EmailVerificationScreen),
                   child: const Text(
                     AppString.forgotPassword,
                     style: TextStyle(color: AppColor.red),
