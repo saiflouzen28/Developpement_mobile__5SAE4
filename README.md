@@ -247,7 +247,7 @@ This project is licensed under the MIT License.
 
 ## 👥 Authors
 
-- **Your Name** - Initial work - [MyGitHub]([https://github.com/achrafbannour1])
+- **Your Name** - Initial work - [MyGitHub](https://github.com/achrafbannour1)
 
 ## 🙏 Acknowledgments
 
