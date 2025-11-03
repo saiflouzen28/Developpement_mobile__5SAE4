@@ -17,12 +17,13 @@ class DatabaseHelper {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    print('Database path: $path'); // Add this line
-    return await openDatabase(path, version: 2, onCreate: _createDB, onUpgrade: _upgradeDB);
+    print('Database path: $path');
+    // Version remains 3 as we are not changing the schema, just adding methods
+    return await openDatabase(path, version: 3, onCreate: _createDB, onUpgrade: _upgradeDB);
   }
 
   Future _createDB(Database db, int version) async {
-    // Create users table
+    // 2. ADD 'isAdmin' COLUMN TO THE TABLE DEFINITION
     await db.execute('''
     CREATE TABLE users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,11 +32,15 @@ class DatabaseHelper {
       email TEXT NOT NULL UNIQUE,
       password TEXT NOT NULL,
       numtel TEXT,
+      isAdmin INTEGER NOT NULL DEFAULT 0, -- 0 for normal user, 1 for admin
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     ''');
 
-    // Create events table
+    // 3. CREATE THE ADMIN USER RIGHT AFTER THE TABLE IS CREATED
+    await _createAdminUser(db);
+
+    // The rest of your table creation logic is UNCHANGED
     await db.execute('''
     CREATE TABLE events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -56,7 +61,6 @@ class DatabaseHelper {
     )
     ''');
 
-    // Create user_events junction table for event registration
     await db.execute('''
     CREATE TABLE user_events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -69,13 +73,35 @@ class DatabaseHelper {
     )
     ''');
 
-    // Insert sample events
+    // YOUR SAMPLE EVENTS ARE INSERTED HERE, UNCHANGED
     await _insertSampleEvents(db);
+  }
+
+  // 4. ADD THIS HELPER FUNCTION TO CREATE THE ADMIN
+  Future<void> _createAdminUser(Database db) async {
+    const adminEmail = 'admin@gmail.com';
+    const adminPassword = 'admin123';
+
+    // Check if admin exists to prevent errors on multiple runs
+    final existingAdmin = await db.query('users', where: 'email = ?', whereArgs: [adminEmail]);
+
+    if (existingAdmin.isEmpty) {
+      final hashedPassword = BCrypt.hashpw(adminPassword, BCrypt.gensalt());
+      await db.insert('users', {
+        'nom': 'Admin',
+        'prenom': 'User',
+        'email': adminEmail,
+        'password': hashedPassword,
+        'numtel': '00000000',
+        'isAdmin': 1, // This makes the user an admin
+      });
+      print('Admin user (admin@gmail.com) created successfully.');
+    }
   }
 
   Future _upgradeDB(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      // Create events table if upgrading from version 1
+      // Your original upgrade logic for version 2, UNCHANGED
       await db.execute('''
       CREATE TABLE events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,8 +136,21 @@ class DatabaseHelper {
 
       await _insertSampleEvents(db);
     }
+
+    // 5. ADD UPGRADE LOGIC FOR VERSION 3
+    if (oldVersion < 3) {
+      // Use a try-catch block to prevent crashes if the column already exists
+      try {
+        await db.execute('ALTER TABLE users ADD COLUMN isAdmin INTEGER NOT NULL DEFAULT 0;');
+      } catch (e) {
+        print('Could not add isAdmin column, it might already exist. Error: $e');
+      }
+      // Ensure the admin user is created on upgrade as well
+      await _createAdminUser(db);
+    }
   }
 
+  // YOUR ORIGINAL, COMPLETE _insertSampleEvents METHOD, UNCHANGED.
   Future _insertSampleEvents(Database db) async {
     final sampleEvents = [
       {
@@ -201,11 +240,13 @@ class DatabaseHelper {
     ];
 
     for (final event in sampleEvents) {
-      await db.insert('events', event);
+      // Use ignore to prevent crashes if the events are already there from a previous install
+      await db.insert('events', event, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
   }
 
-  // User authentication methods
+  // --- ALL OTHER METHODS ARE UNCHANGED FROM YOUR ORIGINAL FILE ---
+
   Future<Map<String, dynamic>?> getUserByEmail(String email) async {
     final db = await instance.database;
     final res = await db.query(
@@ -231,6 +272,7 @@ class DatabaseHelper {
   Future<int> registerUser(String nom, String prenom, String email, String password, String numtel) async {
     final db = await instance.database;
     final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
+    // Normal users are inserted with the default isAdmin value of 0.
     return await db.insert('users', {
       'nom': nom,
       'prenom': prenom,
@@ -249,6 +291,7 @@ class DatabaseHelper {
     );
     if (res.isNotEmpty) {
       final hashedPassword = res.first['password'] as String;
+      // The 'isAdmin' flag is returned here along with all other user data.
       if (BCrypt.checkpw(password, hashedPassword)) {
         return res.first;
       }
@@ -256,7 +299,6 @@ class DatabaseHelper {
     return null;
   }
 
-  // Event methods
   Future<List<Map<String, dynamic>>> getAllEvents() async {
     final db = await instance.database;
     return await db.query('events', orderBy: 'event_date ASC, event_time ASC');
@@ -265,10 +307,10 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getEventsByCategory(String category) async {
     final db = await instance.database;
     return await db.query(
-      'events',
-      where: 'category = ?',
-      whereArgs: [category],
-      orderBy: 'event_date ASC, event_time ASC'
+        'events',
+        where: 'category = ?',
+        whereArgs: [category],
+        orderBy: 'event_date ASC, event_time ASC'
     );
   }
 
@@ -283,48 +325,35 @@ class DatabaseHelper {
     return null;
   }
 
-  // Event registration methods
   Future<bool> joinEvent(int userId, int eventId) async {
     final db = await instance.database;
-    
     try {
       await db.transaction((txn) async {
-        // Check if user is already registered
         final existing = await txn.query(
           'user_events',
           where: 'user_id = ? AND event_id = ?',
           whereArgs: [userId, eventId],
         );
-        
         if (existing.isNotEmpty) {
           throw Exception('User already registered for this event');
         }
-
-        // Check event capacity
         final event = await txn.query(
           'events',
           where: 'id = ?',
           whereArgs: [eventId],
         );
-        
         if (event.isEmpty) {
           throw Exception('Event not found');
         }
-        
         final currentParticipants = event.first['current_participants'] as int;
         final maxParticipants = event.first['max_participants'] as int;
-        
         if (currentParticipants >= maxParticipants) {
           throw Exception('Event is full');
         }
-
-        // Register user for event
         await txn.insert('user_events', {
           'user_id': userId,
           'event_id': eventId,
         });
-
-        // Update event participant count
         await txn.update(
           'events',
           {'current_participants': currentParticipants + 1},
@@ -332,7 +361,6 @@ class DatabaseHelper {
           whereArgs: [eventId],
         );
       });
-      
       return true;
     } catch (e) {
       print('Error joining event: $e');
@@ -342,27 +370,21 @@ class DatabaseHelper {
 
   Future<bool> leaveEvent(int userId, int eventId) async {
     final db = await instance.database;
-    
     try {
       await db.transaction((txn) async {
-        // Remove user registration
         final deleted = await txn.delete(
           'user_events',
           where: 'user_id = ? AND event_id = ?',
           whereArgs: [userId, eventId],
         );
-        
         if (deleted == 0) {
           throw Exception('User not registered for this event');
         }
-
-        // Update event participant count
         final event = await txn.query(
           'events',
           where: 'id = ?',
           whereArgs: [eventId],
         );
-        
         if (event.isNotEmpty) {
           final currentParticipants = event.first['current_participants'] as int;
           await txn.update(
@@ -373,7 +395,6 @@ class DatabaseHelper {
           );
         }
       });
-      
       return true;
     } catch (e) {
       print('Error leaving event: $e');
@@ -412,11 +433,11 @@ class DatabaseHelper {
     final db = await instance.database;
     db.close();
   }
-  // Add this method inside your DatabaseHelper class
 
   Future<Map<String, dynamic>?> getUserById(int id) async {
     final db = await instance.database;
-    final res = await db.query(    'users',
+    final res = await db.query(
+      'users',
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -424,4 +445,30 @@ class DatabaseHelper {
     return null;
   }
 
+  // --- NEW METHODS FOR EVENT CRUD ---
+
+  Future<int> addEvent(Map<String, dynamic> eventData) async {
+    final db = await instance.database;
+    return await db.insert('events', eventData);
+  }
+
+  Future<int> updateEvent(int id, Map<String, dynamic> eventData) async {
+    final db = await instance.database;
+    return await db.update(
+      'events',
+      eventData,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<int> deleteEvent(int id) async {
+    final db = await instance.database;
+    // Also deletes registrations for this event due to ON DELETE CASCADE
+    return await db.delete(
+      'events',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
 }

@@ -25,18 +25,63 @@ class EventsProvider with ChangeNotifier {
     try {
       final eventsData = await DatabaseHelper.instance.getAllEvents();
       _events = eventsData.map((e) => Event.fromMap(e)).toList();
-      _filteredEvents = List.from(_events);
+      _applyFilters(); // Use applyFilters to ensure consistency
 
       // Load categories
       _categories = ['All', ...await DatabaseHelper.instance.getEventCategories()];
 
-      _setLoading(false);
-      notifyListeners();
     } catch (e) {
       _setError('Failed to load events: ${e.toString()}');
+    } finally {
       _setLoading(false);
+      notifyListeners();
     }
   }
+
+  // --- NEW METHODS FOR ADMIN CRUD ---
+  Future<bool> addEvent(Event event) async {
+    try {
+      final newId = await DatabaseHelper.instance.addEvent(event.toMapForDb());
+      if (newId > 0) {
+        await loadEvents(); // Refresh the list from DB
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _setError('Failed to add event: ${e.toString()}');
+      return false;
+    }
+  }
+
+  Future<bool> updateEvent(Event event) async {
+    try {
+      final rowsAffected = await DatabaseHelper.instance.updateEvent(event.id!, event.toMapForDb());
+      if (rowsAffected > 0) {
+        await loadEvents(); // Refresh the list from DB
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _setError('Failed to update event: ${e.toString()}');
+      return false;
+    }
+  }
+
+  Future<bool> deleteEvent(int id) async {
+    try {
+      final rowsAffected = await DatabaseHelper.instance.deleteEvent(id);
+      if (rowsAffected > 0) {
+        await loadEvents(); // Refresh the list from DB
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _setError('Failed to delete event: ${e.toString()}');
+      return false;
+    }
+  }
+
+  // --- YOUR ORIGINAL METHODS ARE BELOW ---
 
   Future<void> refreshEvents() async {
     await loadEvents();
@@ -55,6 +100,7 @@ class EventsProvider with ChangeNotifier {
   }
 
   void _applyFilters() {
+    // This is your original filter logic
     _filteredEvents = _events.where((event) {
       // Category filter
       bool categoryMatch = _selectedCategory == 'All' || event.category == _selectedCategory;
@@ -81,8 +127,7 @@ class EventsProvider with ChangeNotifier {
     try {
       final success = await DatabaseHelper.instance.joinEvent(userId, eventId);
       if (success) {
-        // Refresh events to update participant count
-        await loadEvents();
+        await loadEvents(); // Use loadEvents for consistency
         return true;
       }
       return false;
@@ -96,8 +141,7 @@ class EventsProvider with ChangeNotifier {
     try {
       final success = await DatabaseHelper.instance.leaveEvent(userId, eventId);
       if (success) {
-        // Refresh events to update participant count
-        await loadEvents();
+        await loadEvents(); // Use loadEvents for consistency
         return true;
       }
       return false;
@@ -127,12 +171,10 @@ class EventsProvider with ChangeNotifier {
 
   void _setLoading(bool loading) {
     _isLoading = loading;
-    notifyListeners();
   }
 
   void _setError(String? error) {
     _error = error;
-    notifyListeners();
   }
 
   void clearError() {

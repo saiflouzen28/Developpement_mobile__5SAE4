@@ -4,6 +4,8 @@ import 'package:animate_do/animate_do.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../core/constant/app_route.dart';
 import '../../../core/constant/app_theme.dart';
+// --- ADD THIS IMPORT ---
+import '../admin/admin_dashboard_screen.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -29,12 +31,12 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   void initState() {
     super.initState();
-    // Clear any existing errors when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<AuthProvider>(context, listen: false).clearError();
     });
   }
 
+  // --- THIS IS THE ONLY FUNCTION THAT IS MODIFIED ---
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -49,10 +51,23 @@ class _SignInScreenState extends State<SignInScreen> {
     setState(() => _isLoading = false);
 
     if (success && mounted) {
-      Navigator.pushReplacementNamed(context, AppRoute.home);
+      // Get the user object from the provider
+      final user = authProvider.user;
+
+      // Check if the user is an admin and navigate
+      if (user != null && user.isAdmin) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+        );
+      } else {
+        // Otherwise, go to the normal home page like before
+        Navigator.pushReplacementNamed(context, AppRoute.home);
+      }
     }
   }
 
+  // --- THE ENTIRE BUILD METHOD IS UNCHANGED ---
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
@@ -68,8 +83,6 @@ class _SignInScreenState extends State<SignInScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 40),
-
-                  // Header with animation
                   FadeInDown(
                     duration: const Duration(milliseconds: 600),
                     child: Column(
@@ -92,10 +105,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 48),
-
-                  // Email Field with animation
                   FadeInUp(
                     duration: const Duration(milliseconds: 600),
                     delay: const Duration(milliseconds: 200),
@@ -133,10 +143,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 24),
-
-                  // Password Field with animation
                   FadeInUp(
                     duration: const Duration(milliseconds: 600),
                     delay: const Duration(milliseconds: 300),
@@ -163,8 +170,8 @@ class _SignInScreenState extends State<SignInScreen> {
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscurePassword
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
                                 color: Theme.of(context).textTheme.bodySmall?.color,
                               ),
                               onPressed: () {
@@ -188,10 +195,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
-                  // Forgot Password
                   FadeInUp(
                     duration: const Duration(milliseconds: 600),
                     delay: const Duration(milliseconds: 400),
@@ -199,7 +203,6 @@ class _SignInScreenState extends State<SignInScreen> {
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: () {
-                          // TODO: Implement forgot password
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Forgot password feature coming soon!'),
@@ -216,10 +219,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 24),
-
-                  // Error message
                   if (authProvider.error != null)
                     FadeInUp(
                       duration: const Duration(milliseconds: 400),
@@ -253,10 +253,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         ),
                       ),
                     ),
-
                   if (authProvider.error != null) const SizedBox(height: 24),
-
-                  // Login Button
                   FadeInUp(
                     duration: const Duration(milliseconds: 600),
                     delay: const Duration(milliseconds: 500),
@@ -266,21 +263,18 @@ class _SignInScreenState extends State<SignInScreen> {
                         onPressed: (_isLoading || authProvider.isLoading) ? null : _handleLogin,
                         child: (_isLoading || authProvider.isLoading)
                             ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
                             : const Text('Sign In'),
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 24),
-
-                  // Divider
                   FadeInUp(
                     duration: const Duration(milliseconds: 600),
                     delay: const Duration(milliseconds: 600),
@@ -308,10 +302,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 24),
-
-                  // Sign Up Button
                   FadeInUp(
                     duration: const Duration(milliseconds: 600),
                     delay: const Duration(milliseconds: 700),
@@ -325,10 +316,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 32),
-
-                  // Demo credentials hint
                   FadeInUp(
                     duration: const Duration(milliseconds: 600),
                     delay: const Duration(milliseconds: 800),

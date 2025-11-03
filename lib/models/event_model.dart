@@ -69,15 +69,38 @@ class Event {
     };
   }
 
+  // --- NEW METHOD TO SAVE TO DATABASE ---
+  Map<String, dynamic> toMapForDb() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'image_url': imageUrl,
+      'location': location,
+      'latitude': latitude,
+      'longitude': longitude,
+      'event_date': eventDate,
+      'event_time': eventTime,
+      'max_participants': maxParticipants,
+      'current_participants': currentParticipants,
+      'category': category,
+      'created_by': createdBy,
+    };
+  }
+
   int get availableSeats => maxParticipants - currentParticipants;
-  
+
   bool get isFull => currentParticipants >= maxParticipants;
-  
+
   bool get hasAvailableSeats => availableSeats > 0;
 
   String get formattedDate {
-    final date = DateTime.parse(eventDate);
-    return '${date.day}/${date.month}/${date.year}';
+    try {
+      final date = DateTime.parse(eventDate);
+      return '${date.day}/${date.month}/${date.year}';
+    } catch(e) {
+      return eventDate; // fallback in case of bad data
+    }
   }
 
   String get formattedTime {

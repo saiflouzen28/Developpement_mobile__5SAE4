@@ -4,6 +4,7 @@ class User {
   final String prenom;
   final String email;
   final String? numtel;
+  final bool isAdmin; // <-- ADD THIS
   final String? createdAt;
 
   User({
@@ -12,6 +13,7 @@ class User {
     required this.prenom,
     required this.email,
     this.numtel,
+    this.isAdmin = false, // <-- ADD THIS DEFAULT VALUE
     this.createdAt,
   });
 
@@ -22,6 +24,7 @@ class User {
       prenom: map['prenom'],
       email: map['email'],
       numtel: map['numtel'],
+      isAdmin: map['isAdmin'] == 1, // <-- ADD THIS LOGIC TO CONVERT FROM DB
       createdAt: map['created_at'],
     );
   }
@@ -46,6 +49,7 @@ class User {
     String? email,
     String? numtel,
     String? createdAt,
+    bool? isAdmin, // <-- ADD THIS
   }) {
     return User(
       id: id ?? this.id,
@@ -54,6 +58,7 @@ class User {
       email: email ?? this.email,
       numtel: numtel ?? this.numtel,
       createdAt: createdAt ?? this.createdAt,
+      isAdmin: isAdmin ?? this.isAdmin, // <-- ADD THIS
     );
   }
 }

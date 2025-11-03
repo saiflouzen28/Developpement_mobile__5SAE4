@@ -48,6 +48,7 @@ flutter:
     - assets/images/
     - assets/models/
     - assets/www/
+    - assets/textures/
 
   
   # Uncomment if you add assets
