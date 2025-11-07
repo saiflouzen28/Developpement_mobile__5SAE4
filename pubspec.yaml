@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  qr_flutter: ^4.1.0
   
   # Core dependencies
   sqflite: ^2.3.0
@@ -21,6 +22,7 @@ dependencies:
   animate_do: ^3.0.2
   cupertino_icons: ^1.0.8
   flutter_inappwebview: ^6.0.0
+
   # State management
   provider: ^6.1.1
   http: ^1.2.1

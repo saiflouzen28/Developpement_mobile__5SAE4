@@ -1,3 +1,6 @@
+import 'package:elearning_events_app/providers/questionsprovider.dart';
+import 'package:elearning_events_app/providers/quizzes_provider.dart';
+import 'package:elearning_events_app/views/screens/quizze/quizze_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -32,6 +35,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => EventsProvider()),
         ChangeNotifierProvider(create: (_) => WalletProvider()),
+        ChangeNotifierProvider(create: (_) => QuizzesProvider()),
+        ChangeNotifierProvider(create: (_) => QuestionsProvider()),
       ],
       child: MaterialApp(
         title: 'E-Learning Events',
@@ -48,6 +53,7 @@ class MyApp extends StatelessWidget {
           AppRoute.eventDetails: (_) => const EventDetailsScreen(),
           AppRoute.schedule: (_) => const ScheduleScreen(),
           AppRoute.profile: (_) => const ProfileScreen(),
+          AppRoute.quizze: (_) => const QuizzesScreen(),
         },
       ),
     );

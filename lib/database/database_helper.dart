@@ -77,8 +77,58 @@ class DatabaseHelper {
     )
     ''');
 
-    // YOUR SAMPLE EVENTS ARE INSERTED HERE, UNCHANGED
+    // Create quizzes table
+    await db.execute('''
+    CREATE TABLE quizzes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      description TEXT,
+      total_questions INTEGER NOT NULL,
+      duration_minutes INTEGER NOT NULL,
+      category TEXT,          -- new column for quiz category
+      difficulty TEXT,        -- new column for quiz difficulty (e.g., Easy, Medium, Hard)
+      created_by INTEGER,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (created_by) REFERENCES users (id)
+    )
+    ''');
+
+
+    // Create questions table
+    await db.execute('''
+    CREATE TABLE questions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      quiz_id INTEGER NOT NULL,
+      question_text TEXT NOT NULL,
+      option_a TEXT NOT NULL,
+      option_b TEXT NOT NULL,
+      option_c TEXT,
+      option_d TEXT,
+      correct_option TEXT NOT NULL,  -- store 'A', 'B', 'C', or 'D'
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (quiz_id) REFERENCES quizzes (id) ON DELETE CASCADE
+    )
+    ''');
+
+      await db.execute('''
+      CREATE TABLE user_quiz_results (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        quiz_id INTEGER NOT NULL,
+        score INTEGER NOT NULL,
+        percentage REAL NOT NULL,
+        passed BOOLEAN NOT NULL,
+        taken_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+        FOREIGN KEY (quiz_id) REFERENCES quizzes (id) ON DELETE CASCADE
+      )
+      ''');
+
+
+
+    // Insert sample events
     await _insertSampleEvents(db);
+    await _insertSampleQuizzes(db);
   }
 
   // 4. ADD THIS HELPER FUNCTION TO CREATE THE ADMIN
@@ -248,6 +298,77 @@ class DatabaseHelper {
       await db.insert('events', event, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
   }
+  Future _insertSampleQuizzes(Database db) async {
+    final sampleQuizzes = [
+      {
+        'title': 'Flutter Basics',
+        'description': 'Test your knowledge of Flutter widgets and layouts.',
+        'total_questions': 10,
+        'duration_minutes': 15,
+        'category': 'Programming',
+        'difficulty': 'Easy',
+        'created_by': 1,
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      {
+        'title': 'Data Science Fundamentals',
+        'description': 'A short quiz to assess your understanding of key data science concepts.',
+        'total_questions': 8,
+        'duration_minutes': 20,
+        'category': 'Data Science',
+        'difficulty': 'Medium',
+        'created_by': 1,
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      {
+        'title': 'UI/UX Design Quiz',
+        'description': 'Check your grasp on UI/UX principles and design patterns.',
+        'total_questions': 12,
+        'duration_minutes': 25,
+        'category': 'Design',
+        'difficulty': 'Medium',
+        'created_by': 1,
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      {
+        'title': 'Machine Learning Essentials',
+        'description': 'How much do you know about supervised and unsupervised learning?',
+        'total_questions': 15,
+        'duration_minutes': 30,
+        'category': 'AI/ML',
+        'difficulty': 'Hard',
+        'created_by': 1,
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      {
+        'title': 'Cybersecurity Awareness',
+        'description': 'Evaluate your knowledge about cybersecurity best practices.',
+        'total_questions': 7,
+        'duration_minutes': 10,
+        'category': 'Security',
+        'difficulty': 'Easy',
+        'created_by': 1,
+        'created_at': DateTime.now().toIso8601String(),
+      },
+      {
+        'title': 'Cloud Computing Overview',
+        'description': 'A quick quiz about cloud models, AWS, and distributed systems.',
+        'total_questions': 9,
+        'duration_minutes': 20,
+        'category': 'Cloud',
+        'difficulty': 'Medium',
+        'created_by': 1,
+        'created_at': DateTime.now().toIso8601String(),
+      },
+    ];
+
+    for (final quiz in sampleQuizzes) {
+      await db.insert('quizzes', quiz);
+    }
+
+    print('✅ Sample quizzes inserted successfully');
+  }
+
 
   // --- ALL OTHER METHODS ARE UNCHANGED FROM YOUR ORIGINAL FILE ---
 
@@ -595,5 +716,176 @@ class DatabaseHelper {
       print('Export error: $e');
       return null;
     }
+  }
+}
+  // ---------------------- QUIZZES METHODS ----------------------
+
+  /// Add a new quiz
+  Future<bool> addQuiz(Map<String, dynamic> quiz) async {
+    try {
+      final db = await database;
+      await db.insert('quizzes', quiz);
+      print('✅ Quiz added successfully: $quiz');
+      return true;
+    } catch (e) {
+      print('Add quiz error: $e');
+      return false;
+    }
+  }
+
+  /// Get all quizzes (latest first)
+  Future<List<Map<String, dynamic>>> getAllQuizzes() async {
+    final db = await database;
+    return await db.query(
+      'quizzes',
+      orderBy: 'created_at DESC',
+    );
+  }
+
+  /// Get a specific quiz by ID
+  Future<Map<String, dynamic>?> getQuizById(int id) async {
+    final db = await database;
+    final result = await db.query(
+      'quizzes',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    return result.isNotEmpty ? result.first : null;
+  }
+
+  /// Update a quiz
+  Future<bool> updateQuiz(Map<String, dynamic> quiz) async {
+    try {
+      final db = await database;
+      await db.update(
+        'quizzes',
+        quiz,
+        where: 'id = ?',
+        whereArgs: [quiz['id']],
+      );
+      print('✅ Quiz updated: ${quiz['title']}');
+      return true;
+    } catch (e) {
+      print('Update quiz error: $e');
+      return false;
+    }
+  }
+
+  /// Delete a quiz
+  Future<bool> deleteQuiz(int quizId) async {
+    try {
+      final db = await database;
+      await db.delete('quizzes', where: 'id = ?', whereArgs: [quizId]);
+      print('🗑️ Quiz deleted: $quizId');
+      return true;
+    } catch (e) {
+      print('Delete quiz error: $e');
+      return false;
+    }
+  }
+
+
+// ---------------------- QUESTIONS METHODS ----------------------
+
+  /// Add a question
+  Future<bool> addQuestion(Map<String, dynamic> question) async {
+    try {
+      final db = await database;
+      await db.insert('questions', question);
+      print('✅ Question added successfully: $question');
+      return true;
+    } catch (e) {
+      print('Add question error: $e');
+      return false;
+    }
+  }
+
+  /// Get all questions for a specific quiz
+  Future<List<Map<String, dynamic>>> getQuestionsByQuiz(int quizId) async {
+    final db = await database;
+    return await db.query(
+      'questions',
+      where: 'quiz_id = ?',
+      whereArgs: [quizId],
+      orderBy: 'created_at DESC',
+    );
+  }
+
+  /// Update a question
+  Future<bool> updateQuestion(Map<String, dynamic> question) async {
+    try {
+      final db = await database;
+      await db.update(
+        'questions',
+        question,
+        where: 'id = ?',
+        whereArgs: [question['id']],
+      );
+      print('✅ Question updated: ${question['question_text']}');
+      return true;
+    } catch (e) {
+      print('Update question error: $e');
+      return false;
+    }
+  }
+
+  /// Delete a question
+  Future<bool> deleteQuestion(int questionId) async {
+    try {
+      final db = await database;
+      await db.delete('questions', where: 'id = ?', whereArgs: [questionId]);
+      print('🗑️ Question deleted: $questionId');
+      return true;
+    } catch (e) {
+      print('Delete question error: $e');
+      return false;
+    }
+  }
+  /// Save a user quiz result
+  static Future<bool> saveQuizResult({
+    required int userId,
+    required int quizId,
+    required int score,
+    required int totalQuestions,
+  }) async {
+    try {
+      final db = await instance.database;
+
+      // Calculate percentage
+      double percentage = (score / totalQuestions) * 100;
+
+      // Determine if the user passed (>=50%)
+      bool passed = percentage >= 50;
+
+      await db.insert(
+        'user_quiz_results',
+        {
+          'user_id': userId,
+          'quiz_id': quizId,
+          'score': score,
+          'percentage': percentage,
+          'passed': passed ? 1 : 0,
+          'taken_at': DateTime.now().toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+      print('✅ Quiz result saved: user $userId, quiz $quizId, score $score/$totalQuestions');
+      return true;
+    } catch (e) {
+      print('❌ Save quiz result error: $e');
+      return false;
+    }
+  }
+
+  /// Fetch quiz history for a user
+  static Future<List<Map<String, dynamic>>> getUserQuizResults(int userId) async {
+    final db = await instance.database;
+    return await db.query(
+      'user_quiz_results',
+      where: 'user_id = ?',
+      whereArgs: [userId],
+      orderBy: 'taken_at DESC',
+    );
   }
 }

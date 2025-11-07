@@ -7,5 +7,6 @@ class AppRoute {
   static const String schedule = '/schedule';
   static const String profile = '/profile';
   static const String emailVerification = '/emailVerification';
+  static const String quizze = '/quizze';
 
 }
