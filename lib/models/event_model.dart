@@ -13,7 +13,7 @@ class Event {
   final String category;
   final int? createdBy;
   final String? createdAt;
-
+  final int coinPrice = 50;
   Event({
     this.id,
     required this.title,

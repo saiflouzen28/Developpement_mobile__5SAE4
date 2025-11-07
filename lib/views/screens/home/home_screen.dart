@@ -12,6 +12,8 @@ import '../../../providers/events_provider.dart';
 import '../../../core/constant/app_theme.dart';
 import '../../../core/constant/app_route.dart';
 import '../../../models/user_model.dart';
+import '../games/casino_lobby_screen.dart';
+import '../games/games_screen.dart';
 import '../virtual_room/virtual_room_screen.dart';
 // Dummy models for demonstration
 class Course {
@@ -86,6 +88,16 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             _buildDrawerItem(icon: Icons.school_outlined, title: 'Courses', onTap: () { /* TODO */ }),
             _buildDrawerItem(icon: Icons.event_note_outlined, title: 'Events', onTap: () => Navigator.pushNamed(context, AppRoute.events)),
+            _buildCategoryIcon(
+              context,
+              'Games',
+              Icons.casino,
+              Colors.redAccent,
+                  () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CasinoLobbyScreen()),
+              ),
+            ),
             _buildDrawerItem(icon: Icons.quiz_outlined, title: 'Quizzes & Exams', onTap: () { /* TODO */ }),
             _buildDrawerItem(icon: Icons.article_outlined, title: 'Blog', onTap: () { /* TODO */ }),
             _buildDrawerItem(icon: Icons.workspace_premium_outlined, title: 'Subscription', onTap: () { /* TODO */ }),

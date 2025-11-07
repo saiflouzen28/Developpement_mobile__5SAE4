@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import '../database/database_helper.dart';
 import '../models/event_model.dart';
+import '../models/user_model.dart';
+import '../services/email_service.dart';
 
 class EventsProvider with ChangeNotifier {
   List<Event> _events = [];
@@ -25,9 +27,8 @@ class EventsProvider with ChangeNotifier {
     try {
       final eventsData = await DatabaseHelper.instance.getAllEvents();
       _events = eventsData.map((e) => Event.fromMap(e)).toList();
-      _applyFilters(); // Use applyFilters to ensure consistency
+      _applyFilters();
 
-      // Load categories
       _categories = ['All', ...await DatabaseHelper.instance.getEventCategories()];
 
     } catch (e) {
@@ -38,12 +39,11 @@ class EventsProvider with ChangeNotifier {
     }
   }
 
-  // --- NEW METHODS FOR ADMIN CRUD ---
   Future<bool> addEvent(Event event) async {
     try {
       final newId = await DatabaseHelper.instance.addEvent(event.toMapForDb());
       if (newId > 0) {
-        await loadEvents(); // Refresh the list from DB
+        await loadEvents();
         return true;
       }
       return false;
@@ -57,7 +57,7 @@ class EventsProvider with ChangeNotifier {
     try {
       final rowsAffected = await DatabaseHelper.instance.updateEvent(event.id!, event.toMapForDb());
       if (rowsAffected > 0) {
-        await loadEvents(); // Refresh the list from DB
+        await loadEvents();
         return true;
       }
       return false;
@@ -71,7 +71,7 @@ class EventsProvider with ChangeNotifier {
     try {
       final rowsAffected = await DatabaseHelper.instance.deleteEvent(id);
       if (rowsAffected > 0) {
-        await loadEvents(); // Refresh the list from DB
+        await loadEvents();
         return true;
       }
       return false;
@@ -80,8 +80,6 @@ class EventsProvider with ChangeNotifier {
       return false;
     }
   }
-
-  // --- YOUR ORIGINAL METHODS ARE BELOW ---
 
   Future<void> refreshEvents() async {
     await loadEvents();
@@ -100,18 +98,13 @@ class EventsProvider with ChangeNotifier {
   }
 
   void _applyFilters() {
-    // This is your original filter logic
     _filteredEvents = _events.where((event) {
-      // Category filter
       bool categoryMatch = _selectedCategory == 'All' || event.category == _selectedCategory;
-
-      // Search filter
       bool searchMatch = _searchQuery.isEmpty ||
           event.title.toLowerCase().contains(_searchQuery) ||
           event.description.toLowerCase().contains(_searchQuery) ||
           event.location.toLowerCase().contains(_searchQuery) ||
           event.category.toLowerCase().contains(_searchQuery);
-
       return categoryMatch && searchMatch;
     }).toList();
   }
@@ -123,13 +116,22 @@ class EventsProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> joinEvent(int userId, int eventId) async {
+  // --- THIS IS THE SIMPLIFIED AND CORRECTED METHOD ---
+  Future<bool> joinEvent(User user, Event event) async {
     try {
-      final success = await DatabaseHelper.instance.joinEvent(userId, eventId);
+      // Use your original, working database logic
+      final success = await DatabaseHelper.instance.joinEvent(user.id!, event.id!);
+
       if (success) {
-        await loadEvents(); // Use loadEvents for consistency
+        // If the database call succeeds, send the confirmation email
+        // We run this in the background without `await` so the UI doesn't freeze
+        EmailService.sendConfirmationEmail(user: user, event: event);
+
+        // Refresh the local event list to update participant counts
+        await loadEvents();
         return true;
       }
+      // If DatabaseHelper.joinEvent returns false, we also return false
       return false;
     } catch (e) {
       _setError('Failed to join event: ${e.toString()}');
@@ -141,7 +143,7 @@ class EventsProvider with ChangeNotifier {
     try {
       final success = await DatabaseHelper.instance.leaveEvent(userId, eventId);
       if (success) {
-        await loadEvents(); // Use loadEvents for consistency
+        await loadEvents();
         return true;
       }
       return false;

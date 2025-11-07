@@ -13,9 +13,11 @@ import 'views/screens/events/event_details_screen.dart';
 import 'views/screens/schedule/schedule_screen.dart';
 import 'views/screens/profile/profile_screen.dart';
 import 'views/screens/home/home_screen.dart';
-
+import 'package:flutter_stripe/flutter_stripe.dart';
+import 'providers/wallet_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  Stripe.publishableKey = 'pk_test_51SQ87HHhwklufEWKb3ROAt3YttLpn2Wm7OxbsD3C45wkhBTMGEc9FoiLCzJClSIif9eZPuFpWJYQ3yuMkoBElRLz00TUgCYGL4';
   await DatabaseHelper.instance.database;
   runApp(const MyApp());
 }
@@ -29,6 +31,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => EventsProvider()),
+        ChangeNotifierProvider(create: (_) => WalletProvider()),
       ],
       child: MaterialApp(
         title: 'E-Learning Events',

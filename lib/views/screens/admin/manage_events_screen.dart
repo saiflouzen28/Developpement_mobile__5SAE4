@@ -18,7 +18,11 @@ class _ManageEventsScreenState extends State<ManageEventsScreen> {
     super.initState();
     // Use a post-frame callback to safely call the provider after the build
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<EventsProvider>(context, listen: false).loadEvents();
+      // Use listen: false in initState
+      final eventsProvider = Provider.of<EventsProvider>(context, listen: false);
+      if (eventsProvider.events.isEmpty) {
+        eventsProvider.loadEvents();
+      }
     });
   }
 
@@ -27,12 +31,8 @@ class _ManageEventsScreenState extends State<ManageEventsScreen> {
     // Use a Consumer to rebuild the UI when the events list changes
     return Consumer<EventsProvider>(
       builder: (context, eventsProvider, child) {
+        // This Scaffold should NOT have an AppBar, as the parent provides it.
         return Scaffold(
-          // --- THE APPBAR IS BACK, WITH THE CORRECT COLOR ---
-          appBar: AppBar(
-            title: const Text('Manage Events'),
-            backgroundColor: AppTheme.errorColor, // Use admin color
-          ),
           body: eventsProvider.isLoading
               ? const Center(child: CircularProgressIndicator(color: AppTheme.errorColor)) // Admin color
               : RefreshIndicator(
@@ -49,7 +49,6 @@ class _ManageEventsScreenState extends State<ManageEventsScreen> {
                   child: ListTile(
                     contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                     leading: CircleAvatar(
-                      // --- COLOR CHANGE ---
                       backgroundColor: AppTheme.errorColor.withOpacity(0.1),
                       child: const Icon(Icons.event, color: AppTheme.errorColor),
                     ),
@@ -59,15 +58,17 @@ class _ManageEventsScreenState extends State<ManageEventsScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blue),
+                          icon: const Icon(Icons.edit, color: AppTheme.primaryColor), // Using theme color
                           onPressed: () {
-                            // Navigate to the edit screen, passing the event
-                            // Using rootNavigator to push over the nav bar
+                            // Navigate to the edit screen, pushing it over the main admin UI
                             Navigator.of(context, rootNavigator: true).push(
                               MaterialPageRoute(
                                 builder: (ctx) => AddEditEventScreen(event: event),
                               ),
-                            );
+                            ).then((_) {
+                              // Refresh events when returning from the edit screen
+                              Provider.of<EventsProvider>(context, listen: false).loadEvents();
+                            });
                           },
                         ),
                         IconButton(
@@ -85,17 +86,18 @@ class _ManageEventsScreenState extends State<ManageEventsScreen> {
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () {
-              // Navigate to the add screen (no event passed)
-              // Using rootNavigator to push over the nav bar
+              // Navigate to the add screen
               Navigator.of(context, rootNavigator: true).push(
                 MaterialPageRoute(
                   builder: (ctx) => const AddEditEventScreen(),
                 ),
-              );
+              ).then((_) {
+                // Refresh events when returning from the add screen
+                Provider.of<EventsProvider>(context, listen: false).loadEvents();
+              });
             },
-            // --- COLOR CHANGE ---
             backgroundColor: AppTheme.errorColor,
-            child: const Icon(Icons.add),
+            child: const Icon(Icons.add, color: Colors.white),
           ),
         );
       },
@@ -117,16 +119,9 @@ class _ManageEventsScreenState extends State<ManageEventsScreen> {
             child: const Text('Delete'),
             style: TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
             onPressed: () async {
-              Navigator.of(ctx).pop();
-              final success = await provider.deleteEvent(event.id!);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(success ? 'Event deleted successfully!' : 'Failed to delete event.'),
-                    backgroundColor: success ? AppTheme.successColor : AppTheme.errorColor,
-                  ),
-                );
-              }
+              Navigator.of(ctx).pop(); // Close the dialog
+              await provider.deleteEvent(event.id!);
+              // The Consumer will automatically rebuild the list, no need for manual refresh here
             },
           ),
         ],
