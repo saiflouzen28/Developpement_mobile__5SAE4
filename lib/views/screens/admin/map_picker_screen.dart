@@ -30,7 +30,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Select Location'),
-        backgroundColor: AppTheme.primaryColor,
+        backgroundColor: AppTheme.errorColor,
         actions: [
           // Add a confirmation button
           IconButton(

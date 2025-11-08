@@ -3,11 +3,9 @@ import 'package:provider/provider.dart';
 import '../../../core/constant/app_route.dart';
 import '../../../core/constant/app_theme.dart';
 import '../../../providers/auth_provider.dart';
-import 'manage_events_screen.dart'; // Already imported
-// Import your user management screen when you create it
-// import 'manage_users_screen.dart';
+import 'manage_events_screen.dart';
+import 'statistics_screen.dart'; // <-- 1. IMPORT THE NEW STATISTICS SCREEN
 
-// --- The AdminDashboardScreen is now a "shell" that manages pages ---
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -16,14 +14,15 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  // --- STATE FOR MANAGING THE SELECTED TAB ---
   int _selectedIndex = 0;
 
-  // --- LIST OF YOUR ADMIN PAGES ---
+  // --- 2. ADD THE NEW SCREEN TO THE LIST OF PAGES ---
+  // This list now has 4 items. The new StatisticsScreen is second.
   static const List<Widget> _adminPages = <Widget>[
-    _DashboardHomeContent(), // The original "Welcome, Admin!" content
+    _DashboardHomeContent(), // Your original "Welcome" screen
+    StatisticsScreen(),      // The new statistics screen
     ManageEventsScreen(),    // Your existing screen for managing events
-    ManageUsersScreen(),     // A placeholder for your user management screen
+    ManageUsersScreen(),     // Your placeholder for user management
   ];
 
   void _onItemTapped(int index) {
@@ -38,33 +37,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_getAppBarTitle(_selectedIndex)), // Title changes with the page
+        title: Text(_getAppBarTitle(_selectedIndex)),
         backgroundColor: AppTheme.errorColor,
-        automaticallyImplyLeading: false, // No back button on the main dashboard
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Logout',
             onPressed: () {
               authProvider.logout();
-              // Use root navigator to ensure we exit the admin section completely
               Navigator.of(context, rootNavigator: true)
                   .pushReplacementNamed(AppRoute.signIn);
             },
           ),
         ],
       ),
-      // --- THE BODY NOW SHOWS THE SELECTED ADMIN PAGE ---
       body: Center(
         child: _adminPages.elementAt(_selectedIndex),
       ),
-      // --- ADD THE BOTTOM NAVIGATION BAR ---
+      // --- 3. ADD THE NEW ITEM TO THE BOTTOM NAVIGATION BAR ---
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard_outlined),
             activeIcon: Icon(Icons.dashboard),
             label: 'Dashboard',
+          ),
+          // --- NEW ITEM FOR STATISTICS ---
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart_outlined),
+            activeIcon: Icon(Icons.bar_chart),
+            label: 'Statistics',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.event_note_outlined),
@@ -79,24 +82,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ],
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        // Style it to match the admin theme
         backgroundColor: Colors.white,
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppTheme.errorColor, // Active icon color
-        unselectedItemColor: Colors.grey[700],   // Inactive icon color
+        selectedItemColor: AppTheme.errorColor,
+        unselectedItemColor: Colors.grey[700],
         elevation: 8.0,
       ),
     );
   }
 
-  // Helper to get the correct AppBar title for each screen
+  // --- 4. UPDATE THE HELPER TO INCLUDE THE NEW TITLE ---
   String _getAppBarTitle(int index) {
     switch (index) {
       case 0:
         return 'Admin Dashboard';
       case 1:
-        return 'Manage Events';
+        return 'Statistics & Analytics'; // Title for the new screen
       case 2:
+        return 'Manage Events';
+      case 3:
         return 'Manage Users';
       default:
         return 'Admin';
@@ -104,15 +108,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 }
 
-// --- YOUR ORIGINAL DASHBOARD CONTENT IS MOVED INTO THIS PRIVATE WIDGET ---
+// YOUR ORIGINAL _DashboardHomeContent WIDGET REMAINS UNCHANGED AND IS CORRECT
 class _DashboardHomeContent extends StatelessWidget {
   const _DashboardHomeContent();
-
   @override
   Widget build(BuildContext context) {
-    // We get the provider again here, as this is a new build context
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -147,11 +148,9 @@ class _DashboardHomeContent extends StatelessWidget {
   }
 }
 
-// --- DUMMY SCREEN FOR USER MANAGEMENT ---
-// You can replace this with your actual `ManageUsersScreen` when you build it.
+// YOUR DUMMY ManageUsersScreen WIDGET REMAINS UNCHANGED AND IS CORRECT
 class ManageUsersScreen extends StatelessWidget {
   const ManageUsersScreen({super.key});
-
   @override
   Widget build(BuildContext context) {
     return const Center(

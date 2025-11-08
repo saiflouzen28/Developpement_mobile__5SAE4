@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:bcrypt/bcrypt.dart';
+import 'package:csv/csv.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -470,5 +474,126 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+  // --- NEW METHOD FOR ADMIN STATISTICS: Events Per User ---
+  Future<List<Map<String, dynamic>>> getEventsPerUser() async {
+    final db = await database;
+    // This SQL query joins the users table with the user_events table,
+    // groups the results by user, and counts the number of events for each.
+    final List<Map<String, dynamic>> result = await db.rawQuery('''
+      SELECT
+        U.id,
+        U.prenom,
+        U.nom,
+        U.email,
+        COUNT(UE.event_id) as event_count
+      FROM users U
+      LEFT JOIN user_events UE ON U.id = UE.user_id
+      WHERE U.isAdmin = 0 -- Exclude admin from the list
+      GROUP BY U.id
+      ORDER BY event_count DESC, U.prenom ASC
+    ''');
+    return result;
+  }
+
+  // --- NEW METHOD FOR ADMIN STATISTICS: Earnings Per Event ---
+  Future<List<Map<String, dynamic>>> getEarningsPerEvent() async {
+    final db = await database;
+    // This uses the fixed price of 50 coins for the calculation.
+    const coinPrice = 50;
+
+    // This query gets each event and calculates its earnings by multiplying
+    // the participant count by the fixed coin price.
+    final List<Map<String, dynamic>> result = await db.rawQuery('''
+      SELECT
+        id,
+        title,
+        category,
+        current_participants,
+        (current_participants * ?) as earnings
+      FROM events
+      WHERE current_participants > 0
+      ORDER BY earnings DESC, title ASC
+    ''', [coinPrice]);
+    return result;
+  }
+// Add this at the end of DatabaseHelper class
+  Future<String?> exportStatisticsToCsv() async {
+    try {
+      final db = await database;
+
+      // 1. Total Earnings
+      final totalRes = await db.rawQuery(
+          'SELECT SUM(current_participants * 50) as total FROM events WHERE current_participants > 0');
+      final totalEarnings = totalRes.first['total'] as int? ?? 0;
+
+      // 2. Total Users (non-admin)
+      final userCountRes = await db.rawQuery('SELECT COUNT(*) as count FROM users WHERE isAdmin = 0');
+      final totalUsers = userCountRes.first['count'] as int;
+
+      // 3. Avg per user
+      final avgPerUser = totalUsers > 0 ? (totalEarnings / totalUsers).round() : 0;
+
+      // 4. Events per user
+      final usersData = await db.rawQuery('''
+      SELECT u.prenom, u.nom, u.email, COUNT(ue.event_id) as events
+      FROM users u
+      LEFT JOIN user_events ue ON u.id = ue.user_id
+      WHERE u.isAdmin = 0
+      GROUP BY u.id
+      ORDER BY events DESC
+    ''');
+
+      // 5. Earnings per event
+      final eventsData = await db.rawQuery('''
+      SELECT title, category, current_participants, (current_participants * 50) as earnings
+      FROM events
+      WHERE current_participants > 0
+      ORDER BY earnings DESC
+    ''');
+
+      // Build CSV
+      final csv = <List<dynamic>>[];
+
+      // Header
+      csv.add(['E-Learning Platform Statistics']);
+      csv.add(['Generated on', DateTime.now().toString()]);
+      csv.add([]);
+
+      // Summary
+      csv.add(['SUMMARY']);
+      csv.add(['Total Earnings (coins)', totalEarnings]);
+      csv.add(['Total Users', totalUsers]);
+      csv.add(['Avg Coins per User', avgPerUser]);
+      csv.add([]);
+
+      // Events per User
+      csv.add(['EVENTS PER USER']);
+      csv.add(['First Name', 'Last Name', 'Email', 'Events Joined']);
+      for (var u in usersData) {
+        csv.add([u['prenom'], u['nom'], u['email'], u['events']]);
+      }
+      csv.add([]);
+
+      // Earnings per Event
+      csv.add(['EARNINGS PER EVENT']);
+      csv.add(['Title', 'Category', 'Participants', 'Earnings (coins)']);
+      for (var e in eventsData) {
+        csv.add([e['title'], e['category'], e['current_participants'], e['earnings']]);
+      }
+
+      // Convert to string
+      final csvString = const ListToCsvConverter().convert(csv);
+
+      // Save file
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/stats_${DateTime.now().millisecondsSinceEpoch}.csv');
+      await file.writeAsString(csvString);
+
+      return file.path; // Return path to show in UI
+    } catch (e) {
+      print('Export error: $e');
+      return null;
+    }
   }
 }

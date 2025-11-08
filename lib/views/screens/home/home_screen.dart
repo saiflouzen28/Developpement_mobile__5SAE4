@@ -15,6 +15,10 @@ import '../../../models/user_model.dart';
 import '../games/casino_lobby_screen.dart';
 import '../games/games_screen.dart';
 import '../virtual_room/virtual_room_screen.dart';
+import '../schedule/schedule_screen.dart';
+import '../profile/profile_screen.dart';
+import '../chatbot/chatbot_screen.dart';
+
 // Dummy models for demonstration
 class Course {
   final String title;
@@ -37,6 +41,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int _currentIndex = 0;
+  bool _showChatbot = false;
 
   final List<Course> _featuredCourses = [
     Course(title: 'Advanced Flutter State Management', author: 'Jane Doe', imageUrl: 'assets/images/python_course.jpg'),
@@ -55,6 +61,196 @@ class _HomeScreenState extends State<HomeScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final User? user = authProvider.user;
 
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Only show home content, no IndexedStack
+          _buildHomeContent(user),
+
+          // Floating chatbot bubble
+          if (!_showChatbot)
+            Positioned(
+              right: 20,
+              bottom: 90,
+              child: ZoomIn(
+                duration: const Duration(milliseconds: 500),
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() => _showChatbot = true);
+                  },
+                  child: Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.primaryColor.withOpacity(0.5),
+                          blurRadius: 15,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      children: [
+                        const Center(
+                          child: Text(
+                            '🤖',
+                            style: TextStyle(fontSize: 28),
+                          ),
+                        ),
+                        // Pulse animation
+                        Positioned.fill(
+                          child: TweenAnimationBuilder(
+                            tween: Tween<double>(begin: 0.0, end: 1.0),
+                            duration: const Duration(seconds: 2),
+                            builder: (context, double value, child) {
+                              return Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(1 - value),
+                                    width: 2,
+                                  ),
+                                ),
+                              );
+                            },
+                            onEnd: () {
+                              if (mounted) setState(() {});
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+          // Chatbot overlay
+          if (_showChatbot)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black54,
+                child: Column(
+                  children: [
+                    // Close button
+                    SafeArea(
+                      child: Align(
+                        alignment: Alignment.topRight,
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 30,
+                          ),
+                          onPressed: () {
+                            setState(() => _showChatbot = false);
+                          },
+                        ),
+                      ),
+                    ),
+                    // Chatbot screen
+                    Expanded(
+                      child: Container(
+                        margin: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 20,
+                              spreadRadius: 5,
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: const ChatbotScreen(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index;
+              _showChatbot = false; // Close chatbot when navigating
+            });
+
+            // Navigate to different screens using routes
+            switch (index) {
+              case 0:
+              // Already on home
+                break;
+              case 1:
+                Navigator.pushNamed(context, AppRoute.events);
+                break;
+              case 2:
+                Navigator.pushNamed(context, AppRoute.schedule);
+                break;
+              case 3:
+                Navigator.pushNamed(context, AppRoute.profile);
+                break;
+            }
+          },
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: AppTheme.primaryColor,
+          unselectedItemColor: Colors.grey,
+          selectedFontSize: 12,
+          unselectedFontSize: 11,
+          elevation: 8,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.event_outlined),
+              activeIcon: Icon(Icons.event),
+              label: 'Events',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.calendar_today_outlined),
+              activeIcon: Icon(Icons.calendar_today),
+              label: 'Schedule',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline),
+              activeIcon: Icon(Icons.person),
+              label: 'Profile',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Build the original home content
+  Widget _buildHomeContent(User? user) {
     return Scaffold(
       drawer: Drawer(
         child: ListView(
@@ -78,22 +274,22 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             ),
-            // --- FIX #1: THE "HOME" ITEM IS NOW DISABLED ---
-            // It has a different style and its onTap is ignored.
             _buildDrawerItem(
-              icon: Icons.home, // Use filled icon for current page
+              icon: Icons.home,
               title: 'Home',
-              onTap: () {}, // onTap is empty because it will be disabled
-              isSelected: true, // This new flag handles the logic
+              onTap: () {},
+              isSelected: true,
             ),
             _buildDrawerItem(icon: Icons.school_outlined, title: 'Courses', onTap: () { /* TODO */ }),
-            _buildDrawerItem(icon: Icons.event_note_outlined, title: 'Events', onTap: () => Navigator.pushNamed(context, AppRoute.events)),
-            _buildCategoryIcon(
-              context,
-              'Games',
-              Icons.casino,
-              Colors.redAccent,
-                  () => Navigator.push(
+            _buildDrawerItem(
+              icon: Icons.event_note_outlined,
+              title: 'Events',
+              onTap: () => Navigator.pushNamed(context, AppRoute.events),
+            ),
+            _buildDrawerItem(
+              icon: Icons.casino,
+              title: 'Games',
+              onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const CasinoLobbyScreen()),
               ),
@@ -102,8 +298,16 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildDrawerItem(icon: Icons.article_outlined, title: 'Blog', onTap: () { /* TODO */ }),
             _buildDrawerItem(icon: Icons.workspace_premium_outlined, title: 'Subscription', onTap: () { /* TODO */ }),
             const Divider(thickness: 1, indent: 16, endIndent: 16),
-            _buildDrawerItem(icon: Icons.calendar_today_outlined, title: 'My Schedule', onTap: () => Navigator.pushNamed(context, AppRoute.schedule)),
-            _buildDrawerItem(icon: Icons.person_outline, title: 'Profile', onTap: () => Navigator.pushNamed(context, AppRoute.profile)),
+            _buildDrawerItem(
+              icon: Icons.calendar_today_outlined,
+              title: 'My Schedule',
+              onTap: () => Navigator.pushNamed(context, AppRoute.schedule),
+            ),
+            _buildDrawerItem(
+              icon: Icons.person_outline,
+              title: 'Profile',
+              onTap: () => Navigator.pushNamed(context, AppRoute.profile),
+            ),
             const Divider(thickness: 1, indent: 16, endIndent: 16),
             _buildDrawerItem(
               icon: Icons.logout,
@@ -159,8 +363,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 12,
                     children: [
-                      // In your home_screen.dart, inside the build method
-
                       _buildCategoryIcon(
                         context,
                         'Virtual Room',
@@ -170,15 +372,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              // FINAL FIX #3: Ensure the class name here is correct.
                               builder: (context) => const VirtualRoomScreen3D(roomId: 1),
                             ),
                           );
                         },
                       ),
-
                       _buildCategoryIcon(context, 'Courses', Icons.school, AppTheme.primaryColor, () { /* TODO */ }),
-                      _buildCategoryIcon(context, 'Events', Icons.event, AppTheme.successColor, () => Navigator.pushNamed(context, AppRoute.events)),
+                      _buildCategoryIcon(
+                        context,
+                        'Events',
+                        Icons.event,
+                        AppTheme.successColor,
+                            () => Navigator.pushNamed(context, AppRoute.events),
+                      ),
                       _buildCategoryIcon(context, 'Quizzes', Icons.quiz, AppTheme.warningColor, () { /* TODO */ }),
                       _buildCategoryIcon(context, 'Blog', Icons.article, AppTheme.accentColor, () { /* TODO */ }),
                     ],
@@ -245,15 +451,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- FIX #2: THE HELPER METHOD IS NOW SMARTER ---
   ListTile _buildDrawerItem({
     required IconData icon,
     required String title,
     required VoidCallback onTap,
     Color? color,
-    bool isSelected = false, // Use this flag to indicate the current page
+    bool isSelected = false,
   }) {
-    // If the item is selected, give it a different visual style
     final effectiveColor = isSelected ? AppTheme.primaryColor : color;
 
     return ListTile(
@@ -266,12 +470,11 @@ class _HomeScreenState extends State<HomeScreen> {
           fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
         ),
       ),
-      // If the item is selected, its onTap does nothing. Otherwise, it navigates.
       onTap: isSelected
-          ? () => Navigator.pop(context) // Just close the drawer
+          ? () => Navigator.pop(context)
           : () {
-        Navigator.pop(context); // Close drawer first
-        onTap(); // Then execute the navigation
+        Navigator.pop(context);
+        onTap();
       },
       tileColor: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : null,
       shape: RoundedRectangleBorder(
