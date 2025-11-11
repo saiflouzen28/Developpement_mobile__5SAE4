@@ -596,7 +596,7 @@ class DatabaseHelper {
       whereArgs: [id],
     );
   }
-<<<<<<< HEAD
+
   // --- NEW METHOD FOR ADMIN STATISTICS: Events Per User ---
   Future<List<Map<String, dynamic>>> getEventsPerUser() async {
     final db = await database;
@@ -718,10 +718,6 @@ class DatabaseHelper {
       return null;
     }
   }
-}
-=======
-
->>>>>>> 986e53b (API and IA)
   // ---------------------- QUIZZES METHODS ----------------------
 
   /// Add a new quiz

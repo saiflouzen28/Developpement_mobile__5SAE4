@@ -378,13 +378,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         },
                       ),
                       _buildCategoryIcon(context, 'Courses', Icons.school, AppTheme.primaryColor, () { /* TODO */ }),
-                      _buildCategoryIcon(
-                        context,
-                        'Events',
-                        Icons.event,
-                        AppTheme.successColor,
-                            () => Navigator.pushNamed(context, AppRoute.events),
-                      ),
                       _buildCategoryIcon(context, 'Events', Icons.event, AppTheme.successColor, () => Navigator.pushNamed(context, AppRoute.events)),
                       _buildCategoryIcon(context, 'Quizzes', Icons.quiz, AppTheme.warningColor, () => Navigator.pushNamed(context, AppRoute.quizze)),
                       _buildCategoryIcon(context, 'Blog', Icons.article, AppTheme.accentColor, () { /* TODO */ }),

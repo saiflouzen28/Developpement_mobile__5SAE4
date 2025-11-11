@@ -4,11 +4,9 @@ import '../../../core/constant/app_route.dart';
 import '../../../core/constant/app_theme.dart';
 import '../../../providers/auth_provider.dart';
 import 'manage_events_screen.dart';
-<<<<<<< HEAD
 import 'statistics_screen.dart'; // <-- 1. IMPORT THE NEW STATISTICS SCREEN
-=======
 import 'manage_quizzes_screen.dart';
->>>>>>> 986e53b (API and IA)
+
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -24,14 +22,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   // This list now has 4 items. The new StatisticsScreen is second.
   static const List<Widget> _adminPages = <Widget>[
     _DashboardHomeContent(), // Your original "Welcome" screen
-    StatisticsScreen(),      // The new statistics screen
+    StatisticsScreen(),
+    ManageQuizzesScreen(),// The new statistics screen
     ManageEventsScreen(),    // Your existing screen for managing events
-<<<<<<< HEAD
     ManageUsersScreen(),     // Your placeholder for user management
-=======
-    ManageQuizzesScreen(),   // Quiz management screen
-    ManageUsersScreen(),     // A placeholder for your user management screen
->>>>>>> 986e53b (API and IA)
+       // Quiz management screen// A placeholder for your user management screen
   ];
 
   void _onItemTapped(int index) {
@@ -79,15 +74,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             label: 'Statistics',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.event_note_outlined),
-            activeIcon: Icon(Icons.event_note),
-            label: 'Events',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.quiz_outlined),
             activeIcon: Icon(Icons.quiz),
             label: 'Quizzes',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.event_note_outlined),
+            activeIcon: Icon(Icons.event_note),
+            label: 'Events',
+          ),
+
           BottomNavigationBarItem(
             icon: Icon(Icons.people_alt_outlined),
             activeIcon: Icon(Icons.people_alt),
@@ -113,11 +109,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       case 1:
         return 'Statistics & Analytics'; // Title for the new screen
       case 2:
-<<<<<<< HEAD
         return 'Manage Events';
-=======
-        return 'Manage Quizzes';
->>>>>>> 986e53b (API and IA)
       case 3:
         return 'Manage Users';
       default:
