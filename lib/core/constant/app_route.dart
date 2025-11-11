@@ -9,4 +9,8 @@ class AppRoute {
   static const String emailVerification = '/emailVerification';
   static const String quizze = '/quizze';
 
+  static const String postsList = '/postsList';
+  static const String createPost = '/createPost';
+  static const String detailsPost = '/detailsPost';
+  static const String notifications = '/notifications';
 }

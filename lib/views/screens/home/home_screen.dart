@@ -295,7 +295,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             _buildDrawerItem(icon: Icons.quiz_outlined, title: 'Quizzes & Exams', onTap: () => Navigator.pushNamed(context, AppRoute.quizze)),
-            _buildDrawerItem(icon: Icons.article_outlined, title: 'Blog', onTap: () { /* TODO */ }),
+            _buildDrawerItem(icon: Icons.event_note_outlined, title: 'Events', onTap: () => Navigator.pushNamed(context, AppRoute.events)),
+            _buildDrawerItem(icon: Icons.article_outlined, title: 'Postulation', onTap: () => Navigator.pushNamed(context, AppRoute.postsList)),
             _buildDrawerItem(icon: Icons.workspace_premium_outlined, title: 'Subscription', onTap: () { /* TODO */ }),
             const Divider(thickness: 1, indent: 16, endIndent: 16),
             _buildDrawerItem(
@@ -380,7 +381,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       _buildCategoryIcon(context, 'Courses', Icons.school, AppTheme.primaryColor, () { /* TODO */ }),
                       _buildCategoryIcon(context, 'Events', Icons.event, AppTheme.successColor, () => Navigator.pushNamed(context, AppRoute.events)),
                       _buildCategoryIcon(context, 'Quizzes', Icons.quiz, AppTheme.warningColor, () => Navigator.pushNamed(context, AppRoute.quizze)),
-                      _buildCategoryIcon(context, 'Blog', Icons.article, AppTheme.accentColor, () { /* TODO */ }),
+                      _buildCategoryIcon(context, 'Postulation', Icons.article, AppTheme.accentColor, () => Navigator.pushNamed(context, AppRoute.postsList)),
                     ],
                   ),
                 ),
@@ -426,7 +427,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   )
                 else
                   _buildEmptyState('No upcoming events right now.'),
-                _buildSectionHeader('Latest From The Blog', onViewAll: () { /* TODO */ }),
+                _buildSectionHeader('Latest From The Postulation', onViewAll: () { /* TODO */ }),
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
                         (context, index) {
