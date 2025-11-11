@@ -596,6 +596,7 @@ class DatabaseHelper {
       whereArgs: [id],
     );
   }
+<<<<<<< HEAD
   // --- NEW METHOD FOR ADMIN STATISTICS: Events Per User ---
   Future<List<Map<String, dynamic>>> getEventsPerUser() async {
     final db = await database;
@@ -718,6 +719,9 @@ class DatabaseHelper {
     }
   }
 }
+=======
+
+>>>>>>> 986e53b (API and IA)
   // ---------------------- QUIZZES METHODS ----------------------
 
   /// Add a new quiz
@@ -730,6 +734,22 @@ class DatabaseHelper {
     } catch (e) {
       print('Add quiz error: $e');
       return false;
+    }
+  }
+
+  /// Add a new quiz and return the inserted row id (or null on failure)
+  Future<int?> addQuizReturnId(Map<String, dynamic> quiz) async {
+    try {
+      print('DB: addQuizReturnId called with map: $quiz');
+      final db = await database;
+      final id = await db.insert('quizzes', quiz);
+      print('✅ Quiz added with id $id: $quiz');
+      return id;
+    } catch (e, st) {
+      // Log full error and stacktrace to help debugging when insert fails
+      print('Add quiz error: $e');
+      print('Stacktrace: $st');
+      return null;
     }
   }
 
@@ -783,8 +803,6 @@ class DatabaseHelper {
       return false;
     }
   }
-
-
 // ---------------------- QUESTIONS METHODS ----------------------
 
   /// Add a question

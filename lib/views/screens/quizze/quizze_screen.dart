@@ -8,6 +8,9 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/events_provider.dart';
 import '../../../providers/quizzes_provider.dart';
 import 'package:intl/intl.dart';
+import '../../../core/ai_service.dart';
+import '../../../core/constants.dart';
+import '../../../database/database_helper.dart';
 import 'quiz_history_screen.dart';
 
 class QuizzesScreen extends StatefulWidget {
@@ -322,7 +325,33 @@ class _QuizzesScreenState extends State<QuizzesScreen> {
           ],
         ),
         child: FloatingActionButton(
-          onPressed: () => showAddQuizDialog(context, quizzesProvider),
+          onPressed: () => showModalBottomSheet(
+            context: context,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            builder: (_) => SafeArea(
+              child: Wrap(
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.add_rounded),
+                    title: const Text('Create Quiz Manually'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      showAddQuizDialog(context, quizzesProvider);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.auto_awesome_rounded),
+                    title: const Text('Create Quiz with AI'),
+                    subtitle: const Text('Generate questions automatically from topic & description'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      showCreateWithAiDialog(context, quizzesProvider);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
           backgroundColor: Colors.transparent,
           elevation: 0,
           child: const Icon(Icons.add_rounded, size: 32),
@@ -1015,6 +1044,271 @@ class _QuizzesScreenState extends State<QuizzesScreen> {
         ),
       ),
     ),
+    );
+  }
+
+  void showCreateWithAiDialog(BuildContext context, QuizzesProvider quizzesProvider) {
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final totalQuestionsController = TextEditingController(text: '10');
+    final durationController = TextEditingController(text: '15');
+    final _formKey = GlobalKey<FormState>();
+
+    String selectedCategory = 'Technology';
+    String selectedDifficulty = 'Medium';
+    DateTime selectedDate = DateTime.now();
+
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+          backgroundColor: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Colors.white, Colors.purple.shade50]),
+              borderRadius: BorderRadius.circular(28),
+            ),
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: [Colors.purple.shade400, Colors.blue.shade400]),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 28),
+                            SizedBox(width: 12),
+                            Text('Create Quiz with AI', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      _buildTextField(
+                        controller: titleController,
+                        label: 'Quiz Title / Topic',
+                        icon: Icons.topic_rounded,
+                        hint: 'e.g. Basics of Flutter',
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) return 'Title / topic is required';
+                          if (val.trim().length < 3) return 'Must be at least 3 characters';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+
+                      _buildTextField(
+                        controller: descriptionController,
+                        label: 'Short Description / Prompt',
+                        icon: Icons.description_rounded,
+                        hint: 'Briefly describe the quiz scope',
+                        maxLines: 3,
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) return 'Description is required';
+                          if (val.trim().length < 10) return 'Description must be at least 10 characters';
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildTextField(
+                              controller: totalQuestionsController,
+                              label: 'Questions',
+                              icon: Icons.format_list_numbered_rounded,
+                              hint: '10',
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              validator: (val) {
+                                if (val == null || val.trim().isEmpty) return 'Total questions is required';
+                                final n = int.tryParse(val.trim());
+                                if (n == null || n < 4) return 'Enter a valid number (minimum 4)';
+                                return null;
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildTextField(
+                              controller: durationController,
+                              label: 'Minutes',
+                              icon: Icons.timer_rounded,
+                              hint: '15',
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              validator: (val) {
+                                if (val == null || val.trim().isEmpty) return 'Duration is required';
+                                final n = int.tryParse(val.trim());
+                                if (n == null || n < 5) return 'Duration must be at least 5 minutes';
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.purple.shade200)),
+                        child: DropdownButtonFormField<String>(
+                          value: selectedCategory,
+                          items: ['Technology','Design','Marketing','Science','AI','Web Development']
+                              .map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                          onChanged: (v) => setState(() => selectedCategory = v!),
+                          decoration: InputDecoration(labelText: 'Category', labelStyle: TextStyle(color: Colors.purple.shade700), prefixIcon: Icon(Icons.category_rounded, color: Colors.purple.shade400), border: InputBorder.none),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.purple.shade200)),
+                        child: DropdownButtonFormField<String>(
+                          value: selectedDifficulty,
+                          items: ['Easy','Medium','Hard'].map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
+                          onChanged: (v) => setState(() => selectedDifficulty = v!),
+                          decoration: InputDecoration(labelText: 'Difficulty', labelStyle: TextStyle(color: Colors.purple.shade700), prefixIcon: Icon(Icons.bar_chart_rounded, color: Colors.purple.shade400), border: InputBorder.none),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), side: BorderSide(color: Colors.grey.shade400), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                              child: Text('Cancel', style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600, fontSize: 16)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              icon: const Icon(Icons.auto_fix_high_rounded, color: Colors.white),
+                              label: const Text('Generate and Create', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
+                              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), backgroundColor: Colors.purple.shade400),
+                              onPressed: () async {
+                                if (!(_formKey.currentState?.validate() ?? false)) {
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Please fix form errors'), backgroundColor: Colors.redAccent));
+                                  return;
+                                }
+
+                                final title = titleController.text.trim();
+                                final desc = descriptionController.text.trim();
+                                final totalQ = int.tryParse(totalQuestionsController.text.trim()) ?? 10;
+                                final duration = int.tryParse(durationController.text.trim()) ?? 15;
+
+                                // Show progress
+                                showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+
+                                try {
+                                  final generated = await generateQuestionsFromAi(topic: title, description: desc, totalQuestions: totalQ, difficulty: selectedDifficulty);
+
+                                  // Insert quiz and get id
+                                  final quizMap = {
+                                    'title': title,
+                                    'description': desc,
+                                    'total_questions': totalQ,
+                                    'duration_minutes': duration,
+                                    'category': selectedCategory,
+                                    'difficulty': selectedDifficulty,
+                                    'created_by': Provider.of<AuthProvider>(context, listen: false).user?.id ?? 1,
+                                    'created_at': selectedDate.toIso8601String(),
+                                  };
+
+                                  // Debug print to show the exact map we're inserting
+                                  print('AI: inserting quiz map: $quizMap');
+                                  final quizId = await DatabaseHelper.instance.addQuizReturnId(quizMap);
+                                  if (quizId == null) throw Exception('Failed to insert quiz');
+
+                                  // Save generated questions
+                                  for (final q in generated) {
+                                    final qMap = {
+                                      'quiz_id': quizId,
+                                      'question_text': q['question_text'] ?? '',
+                                      'option_a': q['option_a'] ?? '',
+                                      'option_b': q['option_b'] ?? '',
+                                      'option_c': q['option_c'] ?? '',
+                                      'option_d': q['option_d'] ?? '',
+                                      'correct_option': q['correct_option'] ?? 'A',
+                                    };
+                                    await DatabaseHelper.instance.addQuestion(qMap);
+                                  }
+
+                                  Navigator.pop(context); // close progress
+                                  Navigator.pop(context); // close dialog
+
+                                  // Refresh quizzes list
+                                  await quizzesProvider.loadQuizzes();
+
+                                  // Success
+                                  showDialog(context: context, builder: (context) => Dialog(
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                    child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
+                                      const Icon(Icons.check_circle_rounded, color: Colors.green, size: 64),
+                                      const SizedBox(height: 12),
+                                      const Text('Quiz created', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                      const SizedBox(height: 8),
+                                      const Text('Quiz and questions generated successfully using AI.'),
+                                      const SizedBox(height: 16),
+                                      ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('Great'))
+                                    ]))
+                                  ));
+                                } catch (e) {
+                                  Navigator.pop(context); // close progress
+                                  // Show error snackbar
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('AI generation failed: $e'), backgroundColor: Colors.redAccent));
+
+                                  // If we have raw AI output, show it in a dialog to help debugging
+                                  try {
+                                    final raw = (await showDialog<String?>(
+                                      context: context,
+                                      builder: (context) {
+                                        // Import from ai_service
+                                        return AlertDialog(
+                                          title: const Text('AI Response (raw)'),
+                                          content: SingleChildScrollView(
+                                            child: SelectableText(
+                                              // Access the lastAiRawOutput variable from ai_service
+                                              // We'll get it via the imported symbol
+                                              lastAiRawOutput ?? 'No AI response available',
+                                            ),
+                                          ),
+                                          actions: [
+                                            TextButton(onPressed: () => Navigator.pop(context, null), child: const Text('Close')),
+                                          ],
+                                        );
+                                      },
+                                    ));
+                                  } catch (_) {}
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 

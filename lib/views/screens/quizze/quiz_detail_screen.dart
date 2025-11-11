@@ -28,12 +28,16 @@ class _QuizDetailScreenState extends State<QuizDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _loadQuestions();
+    // Load questions after first frame to avoid calling notifyListeners during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadQuestions();
+    });
   }
 
   Future<void> _loadQuestions() async {
     final questionsProvider = Provider.of<QuestionsProvider>(context, listen: false);
     await questionsProvider.loadQuestions(widget.quiz.id!);
+    if (!mounted) return;
     setState(() {
       questions = questionsProvider.questions;
     });
