@@ -26,7 +26,7 @@ class DatabaseHelper {
     print('Database path: $path');
     // Version remains 3 as we are not changing the schema, just adding methods
     return await openDatabase(path, version: 3, onCreate: _createDB, onUpgrade: _upgradeDB);
-    //print('Database path: $path'); // Add this line
+    print('Database path: $path'); // Add this line
     //return await openDatabase(path, version: 7, onCreate: _createDB, onUpgrade: _upgradeDB);
   }
 
@@ -44,6 +44,65 @@ class DatabaseHelper {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     ''');
+
+    await db.execute('''
+      CREATE TABLE courses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        description TEXT,
+        file_path TEXT NOT NULL,
+        created_at INTEGER NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE pack (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        description TEXT,
+        price REAL NOT NULL,
+        duration_days INTEGER NOT NULL,
+        created_at INTEGER,
+        updated_at INTEGER
+      )
+    ''');
+
+    // ✅ TABLE D’ASSOCIATION PACK-COURSE
+    await db.execute('''
+      CREATE TABLE pack_course (
+        pack_id INTEGER NOT NULL,
+        course_id INTEGER NOT NULL,
+        PRIMARY KEY (pack_id, course_id),
+        FOREIGN KEY (pack_id) REFERENCES pack (id) ON DELETE CASCADE,
+        FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE
+      )
+    ''');
+
+    await db.execute('''
+        CREATE TABLE payments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER,
+          pack_id INTEGER,
+          amount REAL,
+          date INTEGER,
+          status TEXT
+        )
+      ''');
+
+    await db.execute('''
+        CREATE TABLE user_packs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER,
+          pack_id INTEGER,
+          start_date INTEGER,
+          end_date INTEGER
+        )
+      ''');
+
+
+
+
+
 
     // 3. CREATE THE ADMIN USER RIGHT AFTER THE TABLE IS CREATED
     await _createAdminUser(db);

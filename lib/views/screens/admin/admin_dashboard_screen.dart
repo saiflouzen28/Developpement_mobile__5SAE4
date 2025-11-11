@@ -1,12 +1,19 @@
+import 'package:elearning_events_app/views/screens/admin/pack_management_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constant/app_route.dart';
 import '../../../core/constant/app_theme.dart';
+import '../../../database/database_helper.dart';
 import '../../../providers/auth_provider.dart';
 import 'manage_events_screen.dart';
 import 'statistics_screen.dart'; // <-- 1. IMPORT THE NEW STATISTICS SCREEN
 import 'manage_quizzes_screen.dart';
 
+import 'AdminStatsScreen.dart';
+import 'course_management_screen.dart';
+import 'manage_events_screen.dart';
+import '../../../services/statistics_service.dart';
+// import 'manage_users_screen.dart'; // si tu as déjà ton vrai screen
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -17,17 +24,32 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _selectedIndex = 0;
+  List<Widget>? _adminPages; // make it nullable
+  late StatisticsService statsService;
 
-  // --- 2. ADD THE NEW SCREEN TO THE LIST OF PAGES ---
-  // This list now has 4 items. The new StatisticsScreen is second.
-  static const List<Widget> _adminPages = <Widget>[
-    _DashboardHomeContent(), // Your original "Welcome" screen
-    StatisticsScreen(),
-    ManageQuizzesScreen(),// The new statistics screen
-    ManageEventsScreen(),    // Your existing screen for managing events
-    ManageUsersScreen(),     // Your placeholder for user management
-       // Quiz management screen// A placeholder for your user management screen
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _initDatabaseAndService();
+  }
+
+  Future<void> _initDatabaseAndService() async {
+    final db = await DatabaseHelper.instance.database;
+    statsService = StatisticsService(db);
+
+    setState(() {
+      _adminPages = [
+        const _DashboardHomeContent(),
+        const StatisticsScreen(),
+        const ManageQuizzesScreen(),
+        const ManageEventsScreen(),
+        const CourseManagementScreen(),
+        const PackManagementScreen(),
+        const ManageUsersScreen(),
+        AdminStatsScreen(statsService: statsService),
+      ];
+    });
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -38,6 +60,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    // Show loading until _adminPages is initialized
+    if (_adminPages == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -56,18 +85,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ],
       ),
-      body: Center(
-        child: _adminPages.elementAt(_selectedIndex),
-      ),
-      // --- 3. ADD THE NEW ITEM TO THE BOTTOM NAVIGATION BAR ---
+      body: _adminPages![_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.dashboard_outlined),
             activeIcon: Icon(Icons.dashboard),
             label: 'Dashboard',
           ),
-          // --- NEW ITEM FOR STATISTICS ---
           BottomNavigationBarItem(
             icon: Icon(Icons.bar_chart_outlined),
             activeIcon: Icon(Icons.bar_chart),
@@ -83,35 +110,49 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             activeIcon: Icon(Icons.event_note),
             label: 'Events',
           ),
-
+          BottomNavigationBarItem(
+            icon: Icon(Icons.picture_as_pdf_outlined),
+            activeIcon: Icon(Icons.picture_as_pdf),
+            label: 'Cours',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.account_balance_outlined),
+            activeIcon: Icon(Icons.account_box_outlined),
+            label: 'Pack',
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.people_alt_outlined),
             activeIcon: Icon(Icons.people_alt),
             label: 'Users',
           ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart),
+            activeIcon: Icon(Icons.bar_chart),
+            label: 'Stats',
+          ),
         ],
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        backgroundColor: Colors.white,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppTheme.errorColor,
-        unselectedItemColor: Colors.grey[700],
-        elevation: 8.0,
       ),
     );
   }
 
-  // --- 4. UPDATE THE HELPER TO INCLUDE THE NEW TITLE ---
   String _getAppBarTitle(int index) {
     switch (index) {
       case 0:
         return 'Admin Dashboard';
       case 1:
-        return 'Statistics & Analytics'; // Title for the new screen
+        return 'Statistics & Analytics';
       case 2:
-        return 'Manage Events';
+        return 'Quizzes';
       case 3:
+        return 'Manage Events';
+      case 4:
+        return 'Gérer les cours';
+      case 5:
+        return 'Gérer les pack';
+      case 6:
         return 'Manage Users';
+      case 7:
+        return 'Statistiques Admin';
       default:
         return 'Admin';
     }
@@ -130,24 +171,15 @@ class _DashboardHomeContent extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.admin_panel_settings_rounded,
-                size: 100, color: AppTheme.errorColor),
+            const Icon(Icons.admin_panel_settings_rounded, size: 100, color: AppTheme.errorColor),
             const SizedBox(height: 20),
-            Text(
-              "Welcome, Admin!",
-              style: Theme.of(context).textTheme.displaySmall,
-            ),
+            Text("Welcome, Admin!", style: Theme.of(context).textTheme.displaySmall),
             const SizedBox(height: 8),
-            Text(
-              authProvider.user?.email ?? 'Admin Email',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(color: AppTheme.lightTextSecondary),
+            Text(authProvider.user?.email ?? 'Admin Email',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.lightTextSecondary),
             ),
             const SizedBox(height: 40),
-            Text(
-              "Select an option from the bottom navigation bar to get started.",
+            Text("Select an option from the bottom navigation bar to get started.",
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleMedium,
             ),
@@ -169,10 +201,7 @@ class ManageUsersScreen extends StatelessWidget {
         children: [
           Icon(Icons.construction, size: 80, color: Colors.grey),
           SizedBox(height: 16),
-          Text(
-            "User Management Coming Soon!",
-            style: TextStyle(fontSize: 22, color: Colors.grey),
-          ),
+          Text("User Management Coming Soon!", style: TextStyle(fontSize: 22, color: Colors.grey)),
         ],
       ),
     );

@@ -382,6 +382,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       _buildCategoryIcon(context, 'Events', Icons.event, AppTheme.successColor, () => Navigator.pushNamed(context, AppRoute.events)),
                       _buildCategoryIcon(context, 'Quizzes', Icons.quiz, AppTheme.warningColor, () => Navigator.pushNamed(context, AppRoute.quizze)),
                       _buildCategoryIcon(context, 'Postulation', Icons.article, AppTheme.accentColor, () => Navigator.pushNamed(context, AppRoute.postsList)),
+                      _buildCategoryIcon(context, 'packs', Icons.event, AppTheme.successColor, () => Navigator.pushNamed(context, AppRoute.PackStoreScreen)),
+
                     ],
                   ),
                 ),

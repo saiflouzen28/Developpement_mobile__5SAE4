@@ -469,7 +469,8 @@ class _AnimatedBarChartState extends State<AnimatedBarChart>
               final i = value.toInt();
               if (i >= widget.data.length) return const SizedBox.shrink();
               return SideTitleWidget(
-                axisSide: meta.axisSide,
+                meta: meta, // ← required now
+              //  axisSide: meta.axisSide,
                 child: Text(
                   widget.getBottomTitle(widget.data[i]),
                   style: const TextStyle(fontSize: 10),

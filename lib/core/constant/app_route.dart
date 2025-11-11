@@ -8,6 +8,8 @@ class AppRoute {
   static const String profile = '/profile';
   static const String emailVerification = '/emailVerification';
   static const String quizze = '/quizze';
+  static const String PackStoreScreen = '/PackStoreScreen';
+
 
   static const String postsList = '/postsList';
   static const String createPost = '/createPost';

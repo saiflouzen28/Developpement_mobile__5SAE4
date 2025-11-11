@@ -44,5 +44,4 @@ void main() {
 
     // Should show validation errors
     expect(find.text('Please enter your email'), findsOneWidget);
-  });
-}
+  });}
