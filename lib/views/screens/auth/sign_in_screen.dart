@@ -99,7 +99,8 @@ class _SignInScreenState extends State<SignInScreen> {
                         Text(
                           'Sign in to continue your learning journey',
                           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Theme.of(context).textTheme.bodySmall?.color,
+                            color:
+                            Theme.of(context).textTheme.bodySmall?.color,
                           ),
                         ),
                       ],
@@ -127,14 +128,16 @@ class _SignInScreenState extends State<SignInScreen> {
                             hintText: 'Enter your email',
                             prefixIcon: Icon(
                               Icons.email_outlined,
-                              color: Theme.of(context).textTheme.bodySmall?.color,
+                              color:
+                              Theme.of(context).textTheme.bodySmall?.color,
                             ),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your email';
                             }
-                            if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value)) {
+                            if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
+                                .hasMatch(value)) {
                               return 'Please enter a valid email';
                             }
                             return null;
@@ -165,7 +168,8 @@ class _SignInScreenState extends State<SignInScreen> {
                             hintText: 'Enter your password',
                             prefixIcon: Icon(
                               Icons.lock_outline,
-                              color: Theme.of(context).textTheme.bodySmall?.color,
+                              color:
+                              Theme.of(context).textTheme.bodySmall?.color,
                             ),
                             suffixIcon: IconButton(
                               icon: Icon(
@@ -205,7 +209,8 @@ class _SignInScreenState extends State<SignInScreen> {
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('Forgot password feature coming soon!'),
+                              content: Text(
+                                  'Forgot password feature coming soon!'),
                             ),
                           );
                         },
@@ -260,7 +265,8 @@ class _SignInScreenState extends State<SignInScreen> {
                     child: SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: (_isLoading || authProvider.isLoading) ? null : _handleLogin,
+                        onPressed:
+                        (_isLoading || authProvider.isLoading) ? null : _handleLogin,
                         child: (_isLoading || authProvider.isLoading)
                             ? const SizedBox(
                           height: 20,
@@ -286,10 +292,14 @@ class _SignInScreenState extends State<SignInScreen> {
                           ),
                         ),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          padding:
+                          const EdgeInsets.symmetric(horizontal: 16),
                           child: Text(
                             'OR',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -334,7 +344,8 @@ class _SignInScreenState extends State<SignInScreen> {
                         children: [
                           Text(
                             'Demo Credentials',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            style:
+                            Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: AppTheme.primaryColor,
                             ),
@@ -342,7 +353,8 @@ class _SignInScreenState extends State<SignInScreen> {
                           const SizedBox(height: 8),
                           Text(
                             'Email: demo@elearning.com\nPassword: password123',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            style:
+                            Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: AppTheme.primaryColor,
                             ),
                           ),

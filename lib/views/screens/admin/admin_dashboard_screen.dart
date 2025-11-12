@@ -5,7 +5,7 @@ import '../../../core/constant/app_route.dart';
 import '../../../core/constant/app_theme.dart';
 import '../../../database/database_helper.dart';
 import '../../../providers/auth_provider.dart';
-import 'manage_events_screen.dart';
+
 import 'statistics_screen.dart'; // <-- 1. IMPORT THE NEW STATISTICS SCREEN
 import 'manage_quizzes_screen.dart';
 
@@ -14,6 +14,7 @@ import 'course_management_screen.dart';
 import 'manage_events_screen.dart';
 import '../../../services/statistics_service.dart';
 // import 'manage_users_screen.dart'; // si tu as déjà ton vrai screen
+import 'manage_courses_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -45,6 +46,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         const ManageEventsScreen(),
         const CourseManagementScreen(),
         const PackManagementScreen(),
+        const ManageCoursesScreen(),
         const ManageUsersScreen(),
         AdminStatsScreen(statsService: statsService),
       ];
@@ -121,6 +123,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             label: 'Pack',
           ),
           BottomNavigationBarItem(
+            icon: Icon(Icons.menu_book_outlined),
+            activeIcon: Icon(Icons.menu_book),
+            label: 'Cours',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(Icons.people_alt_outlined),
             activeIcon: Icon(Icons.people_alt),
             label: 'Users',
@@ -150,8 +157,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       case 5:
         return 'Gérer les pack';
       case 6:
-        return 'Manage Users';
+        return 'Gérer les Cours';
       case 7:
+        return 'Manage Users';
+      case 8:
         return 'Statistiques Admin';
       default:
         return 'Admin';

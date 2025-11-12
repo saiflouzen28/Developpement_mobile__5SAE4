@@ -1,5 +1,3 @@
-// lib/providers/auth_provider.dart
-
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../database/database_helper.dart';
@@ -15,19 +13,14 @@ class AuthProvider with ChangeNotifier {
   String? get error => _error;
   bool get isAuthenticated => _user != null;
 
-  // 2. --- NEW METHOD to check for a saved session ---
+  /// 🔹 Tente la reconnexion automatique (session sauvegardée)
   Future<void> tryAutoLogin() async {
     final prefs = await SharedPreferences.getInstance();
-    if (!prefs.containsKey('userId')) {
-      return; // No saved user, do nothing.
-    }
-    final userId = prefs.getInt('userId');
-    if (userId == null) {
-      return;
-    }
+    if (!prefs.containsKey('userId')) return;
 
-    // Fetch the full user details from the database using the saved ID.
-    // NOTE: Make sure you have a `getUserById` method in your DatabaseHelper.
+    final userId = prefs.getInt('userId');
+    if (userId == null) return;
+
     final userData = await DatabaseHelper.instance.getUserById(userId);
     if (userData != null) {
       _user = User.fromMap(userData);
@@ -35,7 +28,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // 3. --- UPDATED login method ---
+  /// 🔹 Connexion utilisateur (admin ou normal)
   Future<bool> login(String email, String password) async {
     _setLoading(true);
     _setError(null);
@@ -44,9 +37,15 @@ class AuthProvider with ChangeNotifier {
       if (userData != null) {
         _user = User.fromMap(userData);
 
-        // --- SAVE USER SESSION ---
+        // Sauvegarder la session
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('userId', _user!.id!); // Save the logged-in user's ID
+        await prefs.setInt('userId', _user!.id!);
+
+        // Debug info
+        if (kDebugMode) {
+          print('👤 Logged in as: ${_user!.email}');
+          print('🛠️ Admin status: ${_user!.isAdmin}');
+        }
 
         _setLoading(false);
         notifyListeners();
@@ -63,7 +62,7 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // 4. --- UPDATED register method ---
+  /// 🔹 Inscription utilisateur
   Future<bool> register(String nom, String prenom, String email, String password, String numtel) async {
     _setLoading(true);
     _setError(null);
@@ -75,9 +74,16 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
 
-      final userId = await DatabaseHelper.instance.registerUser(nom, prenom, email, password, numtel);
+      final userId = await DatabaseHelper.instance.registerUser(
+        nom,
+        prenom,
+        email,
+        password,
+        numtel,
+      );
+
       if (userId > 0) {
-        // Auto-login after registration and SAVE the session
+        // Auto-login après inscription
         final success = await login(email, password);
         return success;
       }
@@ -92,19 +98,15 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // 5. --- UPDATED logout method ---
+  /// 🔹 Déconnexion + suppression session
   Future<void> logout() async {
     _user = null;
     _error = null;
-
-    // --- CLEAR USER SESSION ---
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('userId'); // Remove the user ID from storage
-
+    await prefs.remove('userId');
     notifyListeners();
   }
 
-  // Helper methods remain the same
   void clearError() {
     _error = null;
     notifyListeners();

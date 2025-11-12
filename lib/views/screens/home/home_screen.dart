@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:animate_do/animate_do.dart';
 
-// Ensure this path is correct for your project structure
+// S'assure que ce chemin est bon pour ton projet
 import '../../screens/events/events_screen.dart';
 
 import '../../../providers/auth_provider.dart';
@@ -57,7 +57,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Use Provider.of with listen: false for actions and data that don't need to rebuild the whole screen.
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final User? user = authProvider.user;
 
@@ -257,7 +256,10 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: EdgeInsets.zero,
           children: [
             UserAccountsDrawerHeader(
-              accountName: Text(user?.prenom ?? 'Guest', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white)),
+              accountName: Text(
+                user?.prenom ?? 'Guest',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+              ),
               accountEmail: Text(user?.email ?? '', style: const TextStyle(color: Colors.white70)),
               currentAccountPicture: CircleAvatar(
                 backgroundColor: Colors.white,
@@ -280,7 +282,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () {},
               isSelected: true,
             ),
-            _buildDrawerItem(icon: Icons.school_outlined, title: 'Courses', onTap: () { /* TODO */ }),
+            _buildDrawerItem(icon: Icons.school_outlined, title: 'Courses', onTap: () => Navigator.pushNamed(context, AppRoute.courses)),
             _buildDrawerItem(
               icon: Icons.event_note_outlined,
               title: 'Events',
@@ -314,9 +316,7 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icons.logout,
               title: 'Logout',
               color: AppTheme.errorColor,
-              onTap: () {
-                Provider.of<AuthProvider>(context, listen: false).logout();
-              },
+              onTap: () => Provider.of<AuthProvider>(context, listen: false).logout(),
             ),
           ],
         ),
@@ -341,7 +341,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     centerTitle: false,
                     title: Text(
                       'Welcome, ${user?.prenom ?? 'Guest'}!',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white, shadows: [Shadow(blurRadius: 2, color: Colors.black26)]),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 22,
+                        color: Colors.white,
+                        shadows: [Shadow(blurRadius: 2, color: Colors.black26)],
+                      ),
                     ),
                     background: Container(
                       decoration: const BoxDecoration(
@@ -378,7 +383,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           );
                         },
                       ),
-                      _buildCategoryIcon(context, 'Courses', Icons.school, AppTheme.primaryColor, () { /* TODO */ }),
+                      _buildCategoryIcon(context, 'Courses', Icons.school, AppTheme.primaryColor, () => Navigator.pushNamed(context, AppRoute.courses)),
                       _buildCategoryIcon(context, 'Events', Icons.event, AppTheme.successColor, () => Navigator.pushNamed(context, AppRoute.events)),
                       _buildCategoryIcon(context, 'Quizzes', Icons.quiz, AppTheme.warningColor, () => Navigator.pushNamed(context, AppRoute.quizze)),
                       _buildCategoryIcon(context, 'Postulation', Icons.article, AppTheme.accentColor, () => Navigator.pushNamed(context, AppRoute.postsList)),
@@ -387,7 +392,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-                _buildSectionHeader('Featured Courses', onViewAll: () { /* TODO */ }),
+                _buildSectionHeader('Featured Courses', onViewAll: () => Navigator.pushNamed(context, AppRoute.courses)),
                 SliverToBoxAdapter(
                   child: SizedBox(
                     height: 240,
@@ -397,7 +402,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       itemCount: _featuredCourses.length,
                       itemBuilder: (context, index) {
                         final course = _featuredCourses[index];
-                        return _buildCourseCard(course);
+                        return GestureDetector(
+                          // ✅ Bonus: cliquer une carte "Featured" ouvre la liste des cours
+                          onTap: () => Navigator.pushNamed(context, AppRoute.courses),
+                          child: _buildCourseCard(course),
+                        );
                       },
                     ),
                   ),
@@ -474,9 +483,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onTap();
       },
       tileColor: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : null,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     );
   }
 
@@ -487,15 +494,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            if (onViewAll != null)
-              TextButton(
-                onPressed: onViewAll,
-                child: const Text('View All'),
-              ),
+            Text(title, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+            if (onViewAll != null) TextButton(onPressed: onViewAll, child: const Text('View All')),
           ],
         ),
       ),
@@ -507,10 +507,7 @@ class _HomeScreenState extends State<HomeScreen> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(16),
-        ),
+        decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

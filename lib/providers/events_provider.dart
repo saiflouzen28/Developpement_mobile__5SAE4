@@ -20,17 +20,16 @@ class EventsProvider with ChangeNotifier {
   String get selectedCategory => _selectedCategory;
   String get searchQuery => _searchQuery;
 
+  /// 🔹 Charger tous les événements (admin ou utilisateur)
   Future<void> loadEvents() async {
     _setLoading(true);
     _setError(null);
-
     try {
       final eventsData = await DatabaseHelper.instance.getAllEvents();
       _events = eventsData.map((e) => Event.fromMap(e)).toList();
       _applyFilters();
 
       _categories = ['All', ...await DatabaseHelper.instance.getEventCategories()];
-
     } catch (e) {
       _setError('Failed to load events: ${e.toString()}');
     } finally {
@@ -80,11 +79,12 @@ class EventsProvider with ChangeNotifier {
       return false;
     }
   }
-
+  /// 🔄 Rafraîchir les événements
   Future<void> refreshEvents() async {
     await loadEvents();
   }
 
+  /// 🔍 Filtres et recherche
   void filterByCategory(String category) {
     _selectedCategory = category;
     _applyFilters();
@@ -139,6 +139,7 @@ class EventsProvider with ChangeNotifier {
     }
   }
 
+  /// 🚪 Quitter un événement
   Future<bool> leaveEvent(int userId, int eventId) async {
     try {
       final success = await DatabaseHelper.instance.leaveEvent(userId, eventId);
@@ -153,18 +154,20 @@ class EventsProvider with ChangeNotifier {
     }
   }
 
+  /// 🔎 Vérifier l’inscription
   Future<bool> isUserRegisteredForEvent(int userId, int eventId) async {
     try {
       return await DatabaseHelper.instance.isUserRegisteredForEvent(userId, eventId);
-    } catch (e) {
+    } catch (_) {
       return false;
     }
   }
 
+  /// 📅 Événements d’un utilisateur
   Future<List<Event>> getUserEvents(int userId) async {
     try {
-      final eventsData = await DatabaseHelper.instance.getUserEvents(userId);
-      return eventsData.map((e) => Event.fromMap(e)).toList();
+      final data = await DatabaseHelper.instance.getUserEvents(userId);
+      return data.map((e) => Event.fromMap(e)).toList();
     } catch (e) {
       _setError('Failed to load user events: ${e.toString()}');
       return [];

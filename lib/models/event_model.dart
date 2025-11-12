@@ -31,6 +31,7 @@ class Event {
     this.createdAt,
   });
 
+  /// 🔹 Convertir depuis la base de données
   factory Event.fromMap(Map<String, dynamic> map) {
     return Event(
       id: map['id'],
@@ -50,6 +51,7 @@ class Event {
     );
   }
 
+  /// 🔹 Conversion classique (utilisée pour affichage, etc.)
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -113,6 +115,7 @@ class Event {
 
   double? get progress => maxParticipants > 0 ? currentParticipants / maxParticipants : 0;
 
+  /// 🔹 Copier l’objet
   Event copyWith({
     int? id,
     String? title,

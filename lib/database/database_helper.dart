@@ -28,8 +28,12 @@ class DatabaseHelper {
     return await openDatabase(path, version: 3, onCreate: _createDB, onUpgrade: _upgradeDB);
     print('Database path: $path'); // Add this line
     //return await openDatabase(path, version: 7, onCreate: _createDB, onUpgrade: _upgradeDB);
+    //return await openDatabase(path,version: 6,onCreate: _createDB,onUpgrade: _upgradeDB,);
   }
 
+  // =========================================================
+  //                    CREATION DE LA BASE
+  // =========================================================
   Future _createDB(Database db, int version) async {
     // 2. ADD 'isAdmin' COLUMN TO THE TABLE DEFINITION
     await db.execute('''
@@ -310,9 +314,10 @@ class DatabaseHelper {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (created_by) REFERENCES users (id)
       )
-      ''');
+    ''');
 
-      await db.execute('''
+    // USER_EVENTS
+    await db.execute('''
       CREATE TABLE user_events (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER NOT NULL,
@@ -322,10 +327,45 @@ class DatabaseHelper {
         FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE,
         UNIQUE(user_id, event_id)
       )
-      ''');
+    ''');
 
-      await _insertSampleEvents(db);
-    }
+    // COURSES
+    await db.execute('''
+      CREATE TABLE courses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        image_url TEXT,
+        category TEXT NOT NULL,
+        price REAL NOT NULL DEFAULT 0,
+        level TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+
+    // LESSONS
+    await db.execute('''
+      CREATE TABLE lessons (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        course_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        pdf_url TEXT,
+        duration INTEGER,
+        order_index INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE
+      )
+    ''');
+
+    await _insertSampleEvents(db);
+    await _insertSampleCoursesAndLessons(db);
+  }
+
+
+  // =========================================================
+  //                    UPGRADE DATABASE
+  // =========================================================
 
     // 5. ADD UPGRADE LOGIC FOR VERSION 3
     if (oldVersion < 3) {
@@ -410,13 +450,110 @@ class DatabaseHelper {
     }
 
 
-  // YOUR ORIGINAL, COMPLETE _insertSampleEvents METHOD, UNCHANGED.
+  // =========================================================
+  //                    CRUD COURSES / LESSONS
+  // =========================================================
+  Future<int> insertCourse(Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.insert('courses', data);
+  }
+
+  Future<int> updateCourse(int id, Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.update('courses', data, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteCourse(int id) async {
+    final db = await instance.database;
+    return await db.delete('courses', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<List<Map<String, dynamic>>> getAllCourses(
+      {String? search, String? category}) async {
+    final db = await instance.database;
+    final where = <String>[];
+    final args = <Object?>[];
+
+    if (category != null && category != 'All') {
+      where.add('c.category = ?');
+      args.add(category);
+    }
+    if (search != null && search.trim().isNotEmpty) {
+      where.add(
+          '(c.title LIKE ? OR c.description LIKE ? OR c.category LIKE ?)');
+      args.addAll(List.filled(3, '%${search.trim()}%'));
+    }
+    final whereSql = where.isEmpty ? '' : 'WHERE ${where.join(' AND ')}';
+    return await db.rawQuery('''
+      SELECT c.*, (SELECT COUNT(*) FROM lessons l WHERE l.course_id = c.id) AS lessons_count
+      FROM courses c
+      $whereSql
+      ORDER BY c.created_at DESC
+    ''', args);
+  }
+
+  Future<Map<String, dynamic>?> getCourseById(int id) async {
+    final db = await instance.database;
+    final res = await db.rawQuery('''
+      SELECT c.*, (SELECT COUNT(*) FROM lessons l WHERE l.course_id = c.id) AS lessons_count
+      FROM courses c
+      WHERE c.id = ?
+      LIMIT 1
+    ''', [id]);
+    return res.isNotEmpty ? res.first : null;
+  }
+
+  Future<List<String>> getCourseCategories() async {
+    final db = await instance.database;
+    final res =
+    await db.rawQuery('SELECT DISTINCT category FROM courses ORDER BY category');
+    return res.map((e) => e['category'] as String).toList();
+  }
+
+  // LESSONS CRUD
+  Future<List<Map<String, dynamic>>> getAllLessons() async {
+    final db = await instance.database;
+    return await db.query('lessons', orderBy: 'created_at DESC');
+  }
+
+  Future<int> insertLesson(Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.insert('lessons', data);
+  }
+
+  Future<int> updateLesson(int id, Map<String, dynamic> data) async {
+    final db = await instance.database;
+    return await db.update('lessons', data, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> deleteLesson(int id) async {
+    final db = await instance.database;
+    return await db.delete('lessons', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<Map<String, dynamic>?> getLessonById(int id) async {
+    final db = await instance.database;
+    final res = await db.query('lessons', where: 'id = ?', whereArgs: [id]);
+    return res.isNotEmpty ? res.first : null;
+  }
+
+  Future<List<Map<String, dynamic>>> getLessonsByCourse(int id) async {
+    final db = await instance.database;
+    return await db.query('lessons',
+        where: 'course_id = ?', whereArgs: [id], orderBy: 'order_index ASC');
+  }
+
+  // =========================================================
+  //                    SEED DATA
+  // =========================================================
   Future _insertSampleEvents(Database db) async {
-    final sampleEvents = [
+    final events = [
       {
         'title': 'Flutter Development Workshop',
-        'description': 'Learn Flutter from scratch and build amazing mobile applications. This comprehensive workshop covers everything from basic widgets to advanced state management.',
-        'image_url': 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=500',
+        'description':
+        'Learn Flutter from scratch and build amazing mobile applications.',
+        'image_url':
+        'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=500',
         'location': 'Tech Hub, Downtown',
         'latitude': 40.7128,
         'longitude': -74.0060,
@@ -428,65 +565,10 @@ class DatabaseHelper {
         'created_by': 1
       },
       {
-        'title': 'Data Science Bootcamp',
-        'description': 'Master data science concepts including machine learning, statistical analysis, and data visualization. Perfect for beginners and intermediate learners.',
-        'image_url': 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=500',
-        'location': 'Innovation Center',
-        'latitude': 40.7589,
-        'longitude': -73.9851,
-        'event_date': '2025-10-20',
-        'event_time': '14:00',
-        'max_participants': 30,
-        'current_participants': 15,
-        'category': 'Data Science',
-        'created_by': 1
-      },
-      {
-        'title': 'UI/UX Design Masterclass',
-        'description': 'Create stunning user interfaces and experiences. Learn design principles, prototyping, and user research techniques from industry experts.',
-        'image_url': 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=500',
-        'location': 'Design Studio, Creative District',
-        'latitude': 40.7489,
-        'longitude': -73.9680,
-        'event_date': '2025-10-25',
-        'event_time': '09:30',
-        'max_participants': 25,
-        'current_participants': 18,
-        'category': 'Design',
-        'created_by': 1
-      },
-      {
-        'title': 'Digital Marketing Summit',
-        'description': 'Explore the latest trends in digital marketing, social media strategies, and growth hacking techniques to boost your business online presence.',
-        'image_url': 'https://images.unsplash.com/photo-1553877522-6494745c1044?w=500',
-        'location': 'Business Center, Financial District',
-        'latitude': 40.7074,
-        'longitude': -74.0113,
-        'event_date': '2025-11-01',
-        'event_time': '11:00',
-        'max_participants': 100,
-        'current_participants': 45,
-        'category': 'Marketing',
-        'created_by': 1
-      },
-      {
-        'title': 'Blockchain Technology Seminar',
-        'description': 'Understand blockchain fundamentals, cryptocurrency, and decentralized applications. Get hands-on experience with smart contract development.',
-        'image_url': 'https://images.unsplash.com/photo-1639322537228-f710d846310a?w=500',
-        'location': 'Tech Park, Silicon Valley',
-        'latitude': 37.7749,
-        'longitude': -122.4194,
-        'event_date': '2025-11-05',
-        'event_time': '15:00',
-        'max_participants': 40,
-        'current_participants': 12,
-        'category': 'Technology',
-        'created_by': 1
-      },
-      {
         'title': 'Artificial Intelligence Workshop',
-        'description': 'Dive into AI and machine learning with practical projects. Learn neural networks, natural language processing, and computer vision applications.',
-        'image_url': 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=500',
+        'description': 'Dive into AI and ML with practical projects.',
+        'image_url':
+        'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=500',
         'location': 'AI Research Center',
         'latitude': 37.4419,
         'longitude': -122.1430,
@@ -496,12 +578,11 @@ class DatabaseHelper {
         'current_participants': 28,
         'category': 'AI',
         'created_by': 1
-      }
+      },
     ];
-
-    for (final event in sampleEvents) {
-      // Use ignore to prevent crashes if the events are already there from a previous install
-      await db.insert('events', event, conflictAlgorithm: ConflictAlgorithm.ignore);
+    for (final e in events) {
+      await db.insert('events', e,
+          conflictAlgorithm: ConflictAlgorithm.ignore);
     }
   }
   Future _insertSampleQuizzes(Database db) async {
@@ -760,9 +841,45 @@ class DatabaseHelper {
     return res.map((e) => e['category'] as String).toList();
   }
 
+  Future _insertSampleCoursesAndLessons(Database db) async {
+    final courses = [
+      {
+        'title': 'Flutter Débutant',
+        'description': 'Widgets de base, navigation, layouts...',
+        'image_url':
+        'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=500',
+        'category': 'Mobile',
+        'price': 49.0,
+        'level': 'Débutant'
+      },
+      {
+        'title': 'GraphQL pour mobiles',
+        'description': 'Consommer un backend GraphQL depuis Flutter.',
+        'image_url':
+        'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=500',
+        'category': 'Backend',
+        'price': 69.0,
+        'level': 'Intermédiaire'
+      },
+    ];
+    for (final c in courses) {
+      final id = await db.insert('courses', c);
+      await db.insert('lessons', {
+        'course_id': id,
+        'title': 'Introduction',
+        'content': 'Présentation du cours.',
+        'order_index': 0,
+        'duration': 15
+      });
+    }
+  }
+
+  // =========================================================
+  //                    CLOSE DATABASE
+  // =========================================================
   Future close() async {
     final db = await instance.database;
-    db.close();
+    await db.close();
   }
 
   Future<Map<String, dynamic>?> getUserById(int id) async {

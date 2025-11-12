@@ -17,6 +17,7 @@ class User {
     this.createdAt,
   });
 
+  /// ✅ Convertit une ligne de la base de données SQLite en objet User
   factory User.fromMap(Map<String, dynamic> map) {
     return User(
       id: map['id'],
@@ -29,6 +30,7 @@ class User {
     );
   }
 
+  /// ✅ Convertit un objet User en Map pour insertion dans SQLite
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -36,20 +38,23 @@ class User {
       'prenom': prenom,
       'email': email,
       'numtel': numtel,
+      'isAdmin': isAdmin ? 1 : 0, // ✅ bool → int pour SQLite
       'created_at': createdAt,
     };
   }
 
+  /// ✅ Getter utile pour l’affichage du nom complet
   String get fullName => '$prenom $nom';
 
+  /// ✅ Crée une copie modifiée d’un utilisateur
   User copyWith({
     int? id,
     String? nom,
     String? prenom,
     String? email,
     String? numtel,
+    bool? isAdmin,
     String? createdAt,
-    bool? isAdmin, // <-- ADD THIS
   }) {
     return User(
       id: id ?? this.id,
@@ -57,8 +62,8 @@ class User {
       prenom: prenom ?? this.prenom,
       email: email ?? this.email,
       numtel: numtel ?? this.numtel,
+      isAdmin: isAdmin ?? this.isAdmin, // ✅ conserve ou modifie isAdmin
       createdAt: createdAt ?? this.createdAt,
-      isAdmin: isAdmin ?? this.isAdmin, // <-- ADD THIS
     );
   }
 }

@@ -14,7 +14,6 @@ class AddEditEventScreen extends StatefulWidget {
   final Event? event;
   const AddEditEventScreen({super.key, this.event});
   bool get isEditing => event != null;
-
   @override
   State<AddEditEventScreen> createState() => _AddEditEventScreenState();
 }
@@ -200,6 +199,24 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: _selectedTime,
+      // --- THEME CHANGE FOR TIME PICKER ---
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppTheme.errorColor,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: AppTheme.errorColor,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null && picked != _selectedTime) {
       setState(() {
@@ -341,7 +358,6 @@ class _AddEditEventScreenState extends State<AddEditEventScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(

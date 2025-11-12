@@ -5,6 +5,8 @@ import 'package:sqflite/sqflite.dart'; // ← pour getDatabasesPath et deleteDat
 import 'package:path/path.dart'; // ← pour join()
 
 import 'database/database_helper.dart';
+
+// Providers
 import 'providers/auth_provider.dart';
 import 'providers/events_provider.dart';
 import 'providers/wallet_provider.dart';
@@ -13,8 +15,14 @@ import 'providers/questionsprovider.dart';
 import 'providers/posts_provider.dart';
 import 'providers/comment_provider.dart';
 import 'providers/notifications_provider.dart';
+import 'providers/courses_provider.dart';
+import 'providers/lessons_provider.dart';
+
+// Theme & routes
 import 'core/constant/app_theme.dart';
 import 'core/constant/app_route.dart';
+
+// Auth
 import 'views/screens/auth/sign_in_screen.dart';
 import 'views/screens/auth/sign_up_screen.dart';
 import 'views/screens/home/home_screen.dart';
@@ -30,6 +38,20 @@ import 'views/screens/packs/pack_store_screen.dart';
 import 'views/screens/packs/stripe_test_page.dart';
 import 'services/stripe_service.dart';
 import 'services/stripe_adel.dart';
+
+// Courses
+import 'views/screens/courses/courses_screen.dart';
+import 'views/screens/courses/course_details_screen.dart';
+
+/// 🧹 Supprime la base locale (à lancer UNE seule fois)
+/*
+Future<void> resetDatabase() async {
+  final dbPath = await getDatabasesPath();
+  final path = join(dbPath, 'elearning.db');
+  await deleteDatabase(path);
+  print('✅ Base de données supprimée, elle sera recréée automatiquement.');
+}
+*/
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,6 +87,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => PostsProvider()),
         ChangeNotifierProvider(create: (_) => CommentsProvider()),
         ChangeNotifierProvider(create: (_) => NotificationsProvider()),
+        ChangeNotifierProvider(create: (_) => CoursesProvider()),
+        ChangeNotifierProvider(create: (_) => LessonsProvider()),
       ],
       child: MaterialApp(
         title: 'E-Learning Events',
@@ -74,9 +98,14 @@ class MyApp extends StatelessWidget {
         themeMode: ThemeMode.system,
         initialRoute: AppRoute.signIn,
         routes: {
+          // Auth
           AppRoute.signIn: (_) => const SignInScreen(),
           AppRoute.signUp: (_) => const SignUpScreen(),
+
+          // Home
           AppRoute.home: (_) => const HomeScreen(),
+
+          // Events
           AppRoute.events: (_) => const EventsScreen(),
           AppRoute.postsList: (_) => const PostsListScreen(),
           AppRoute.createPost: (_) => const CreatePostScreen(),
@@ -86,6 +115,10 @@ class MyApp extends StatelessWidget {
           AppRoute.quizze: (_) => const QuizzesScreen(),
           AppRoute.notifications: (_) => const NotificationsScreen(),
           AppRoute.PackStoreScreen: (_) => const PackStoreScreen(),
+
+          // Courses
+          AppRoute.courses: (_) => const CoursesScreen(),
+          AppRoute.courseDetails: (_) => const CourseDetailsScreen(),
         },
       ),
     );
