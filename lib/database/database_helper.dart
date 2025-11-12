@@ -1144,6 +1144,22 @@ class DatabaseHelper {
     }
   }
 
+  /// Get all comments by a specific user
+  Future<List<Map<String, dynamic>>> getCommentsByUserId(int userId) async {
+    try {
+      final db = await database;
+      return await db.query(
+        'comments',
+        where: 'userId = ?',
+        whereArgs: [userId],
+        orderBy: 'date DESC', // newest first
+      );
+    } catch (e) {
+      print('Get comments by user error: $e');
+      return [];
+    }
+  }
+
   /// Get all comments from database
   Future<List<Map<String, dynamic>>> getAllComments() async {
     try {
