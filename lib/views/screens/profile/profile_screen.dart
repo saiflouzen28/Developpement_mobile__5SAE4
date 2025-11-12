@@ -27,6 +27,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _totalReactionsGiven = 0;
   int _totalReactionsReceived = 0;
   bool _isLoadingStats = false;
+  
+  // Individual emoji counts
+  Map<String, int> _emojiCounts = {
+    'love': 0,
+    'like': 0,
+    'haha': 0,
+    'wow': 0,
+    'sad': 0,
+    'angry': 0,
+  };
 
   @override
   void initState() {
@@ -55,8 +65,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final comments = await DatabaseHelper.instance.getCommentsByUserId(userId);
       _totalComments = comments.length;
 
-      // Get reactions given by user
-      _totalReactionsGiven = await DatabaseHelper.instance.getUserReactionsCount(userId);
+      // Get reactions given by user and count by type
+      final userReactions = await DatabaseHelper.instance.getUserReactions(userId);
+      _totalReactionsGiven = userReactions.length;
+      
+      // Count individual emoji types
+      _emojiCounts = {
+        'love': 0,
+        'like': 0,
+        'haha': 0,
+        'wow': 0,
+        'sad': 0,
+        'angry': 0,
+      };
+      
+      for (var reaction in userReactions) {
+        final reactionType = reaction['reactionType'] as String?;
+        if (reactionType != null && _emojiCounts.containsKey(reactionType)) {
+          _emojiCounts[reactionType] = (_emojiCounts[reactionType] ?? 0) + 1;
+        }
+      }
 
       // Get reactions received on user's posts and comments
       int reactionsOnPosts = 0;
@@ -481,24 +509,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 16),
-                                // Second row: Reactions Given and Received
+                                // Second row: Total Actions and Votes Up
                                 Row(
                                   children: [
                                     Expanded(
                                       child: _buildStatCard(
-                                        icon: Icons.favorite,
-                                        label: 'Likes Given',
-                                        value: '$_totalReactionsGiven',
-                                        color: Colors.pink,
+                                        icon: Icons.touch_app,
+                                        label: 'Total Actions',
+                                        value: '${_userPosts.length + _totalComments + _totalReactionsGiven}',
+                                        color: Colors.purple,
                                       ),
                                     ),
                                     const SizedBox(width: 16),
                                     Expanded(
                                       child: _buildStatCard(
-                                        icon: Icons.thumb_up,
-                                        label: 'Likes Received',
+                                        icon: Icons.favorite,
+                                        label: 'Vote Up Like',
                                         value: '$_totalReactionsReceived',
-                                        color: Colors.orange,
+                                        color: Colors.pink,
                                       ),
                                     ),
                                   ],
@@ -509,6 +537,137 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
               ),
+
+              const SizedBox(height: 24),
+
+              // Emoji Usage Card
+              if (!_isLoadingStats)
+                FadeInUp(
+                  duration: const Duration(milliseconds: 600),
+                  delay: const Duration(milliseconds: 225),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Your Emoji Usage',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              _buildEmojiChip('❤️', 'Loved', _emojiCounts['love']!, Colors.red),
+                              const SizedBox(width: 8),
+                              _buildEmojiChip('👍', 'Liked', _emojiCounts['like']!, Colors.blue),
+                              const SizedBox(width: 8),
+                              _buildEmojiChip('😂', 'Laughed', _emojiCounts['haha']!, Colors.orange),
+                              const SizedBox(width: 8),
+                              _buildEmojiChip('😮', 'Wowed', _emojiCounts['wow']!, Colors.purple),
+                              const SizedBox(width: 8),
+                              _buildEmojiChip('😢', 'Saddened', _emojiCounts['sad']!, Colors.cyan),
+                              const SizedBox(width: 8),
+                              _buildEmojiChip('😡', 'Angered', _emojiCounts['angry']!, Colors.deepOrange),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              const SizedBox(height: 24),
+
+              // Recent Activity Section
+              if (!_isLoadingStats)
+                FadeInUp(
+                  duration: const Duration(milliseconds: 600),
+                  delay: const Duration(milliseconds: 240),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Recent Activity',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '${_userPosts.length + _totalComments + _totalReactionsGiven} actions',
+                                style: const TextStyle(
+                                  color: AppTheme.primaryColor,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        _buildActivityItem(
+                          icon: Icons.article,
+                          color: Colors.blue,
+                          title: 'Posts Created',
+                          count: _userPosts.length,
+                          subtitle: 'You have shared ${_userPosts.length} post${_userPosts.length != 1 ? 's' : ''}',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildActivityItem(
+                          icon: Icons.comment,
+                          color: Colors.green,
+                          title: 'Comments Written',
+                          count: _totalComments,
+                          subtitle: 'You have commented $_totalComments time${_totalComments != 1 ? 's' : ''}',
+                        ),
+                        const SizedBox(height: 12),
+                        _buildActivityItem(
+                          icon: Icons.thumb_up,
+                          color: Colors.orange,
+                          title: 'Reactions Given',
+                          count: _totalReactionsGiven,
+                          subtitle: 'You have reacted $_totalReactionsGiven time${_totalReactionsGiven != 1 ? 's' : ''}',
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
               const SizedBox(height: 24),
 
@@ -744,6 +903,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String label,
     required String value,
     required Color color,
+    String? subtitle,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -767,6 +927,134 @@ class _ProfileScreenState extends State<ProfileScreen> {
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
             textAlign: TextAlign.center,
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.grey[600],
+                fontSize: 11,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmojiChip(String emoji, String label, int count, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              emoji,
+              style: const TextStyle(fontSize: 18),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            '$label by $count person${count != 1 ? 's' : ''}',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Icon(
+            Icons.arrow_forward_ios,
+            size: 14,
+            color: Colors.grey[400],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivityItem({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required int count,
+    required String subtitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        count.toString(),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -823,18 +1111,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+            // Post Image or Icon
+            if (post.imagePath != null && post.imagePath!.isNotEmpty)
+              ClipRRect(
                 borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  post.imagePath!,
+                  width: 60,
+                  height: 60,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.image,
+                        color: Colors.blue,
+                        size: 30,
+                      ),
+                    );
+                  },
+                ),
+              )
+            else
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.article,
+                  color: Colors.blue,
+                  size: 30,
+                ),
               ),
-              child: const Icon(
-                Icons.article,
-                color: Colors.blue,
-                size: 24,
-              ),
-            ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
