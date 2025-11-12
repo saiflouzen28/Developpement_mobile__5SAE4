@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import '../database/database_helper.dart';
 import '../models/event_model.dart';
+import '../models/user_model.dart';
+import '../services/email_service.dart';
 
 class EventsProvider with ChangeNotifier {
   List<Event> _events = [];
@@ -25,16 +27,57 @@ class EventsProvider with ChangeNotifier {
     try {
       final eventsData = await DatabaseHelper.instance.getAllEvents();
       _events = eventsData.map((e) => Event.fromMap(e)).toList();
-      _filteredEvents = List.from(_events);
+      _applyFilters();
 
-      // Load categories
       _categories = ['All', ...await DatabaseHelper.instance.getEventCategories()];
 
-      _setLoading(false);
-      notifyListeners();
     } catch (e) {
       _setError('Failed to load events: ${e.toString()}');
+    } finally {
       _setLoading(false);
+      notifyListeners();
+    }
+  }
+
+  Future<bool> addEvent(Event event) async {
+    try {
+      final newId = await DatabaseHelper.instance.addEvent(event.toMapForDb());
+      if (newId > 0) {
+        await loadEvents();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _setError('Failed to add event: ${e.toString()}');
+      return false;
+    }
+  }
+
+  Future<bool> updateEvent(Event event) async {
+    try {
+      final rowsAffected = await DatabaseHelper.instance.updateEvent(event.id!, event.toMapForDb());
+      if (rowsAffected > 0) {
+        await loadEvents();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _setError('Failed to update event: ${e.toString()}');
+      return false;
+    }
+  }
+
+  Future<bool> deleteEvent(int id) async {
+    try {
+      final rowsAffected = await DatabaseHelper.instance.deleteEvent(id);
+      if (rowsAffected > 0) {
+        await loadEvents();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _setError('Failed to delete event: ${e.toString()}');
+      return false;
     }
   }
 
@@ -56,16 +99,12 @@ class EventsProvider with ChangeNotifier {
 
   void _applyFilters() {
     _filteredEvents = _events.where((event) {
-      // Category filter
       bool categoryMatch = _selectedCategory == 'All' || event.category == _selectedCategory;
-
-      // Search filter
       bool searchMatch = _searchQuery.isEmpty ||
           event.title.toLowerCase().contains(_searchQuery) ||
           event.description.toLowerCase().contains(_searchQuery) ||
           event.location.toLowerCase().contains(_searchQuery) ||
           event.category.toLowerCase().contains(_searchQuery);
-
       return categoryMatch && searchMatch;
     }).toList();
   }
@@ -77,14 +116,22 @@ class EventsProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> joinEvent(int userId, int eventId) async {
+  // --- THIS IS THE SIMPLIFIED AND CORRECTED METHOD ---
+  Future<bool> joinEvent(User user, Event event) async {
     try {
-      final success = await DatabaseHelper.instance.joinEvent(userId, eventId);
+      // Use your original, working database logic
+      final success = await DatabaseHelper.instance.joinEvent(user.id!, event.id!);
+
       if (success) {
-        // Refresh events to update participant count
+        // If the database call succeeds, send the confirmation email
+        // We run this in the background without `await` so the UI doesn't freeze
+        EmailService.sendConfirmationEmail(user: user, event: event);
+
+        // Refresh the local event list to update participant counts
         await loadEvents();
         return true;
       }
+      // If DatabaseHelper.joinEvent returns false, we also return false
       return false;
     } catch (e) {
       _setError('Failed to join event: ${e.toString()}');
@@ -96,7 +143,6 @@ class EventsProvider with ChangeNotifier {
     try {
       final success = await DatabaseHelper.instance.leaveEvent(userId, eventId);
       if (success) {
-        // Refresh events to update participant count
         await loadEvents();
         return true;
       }
@@ -127,12 +173,10 @@ class EventsProvider with ChangeNotifier {
 
   void _setLoading(bool loading) {
     _isLoading = loading;
-    notifyListeners();
   }
 
   void _setError(String? error) {
     _error = error;
-    notifyListeners();
   }
 
   void clearError() {

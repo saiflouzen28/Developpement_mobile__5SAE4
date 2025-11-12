@@ -1,3 +1,12 @@
+import 'package:elearning_events_app/providers/questionsprovider.dart';
+import 'package:elearning_events_app/providers/quizzes_provider.dart';
+import 'package:elearning_events_app/views/screens/quizze/quizze_screen.dart';
+import 'package:elearning_events_app/providers/comment_provider.dart';
+import 'package:elearning_events_app/providers/posts_provider.dart';
+import 'package:elearning_events_app/providers/notifications_provider.dart';
+import 'package:elearning_events_app/views/screens/postulation/create_post_screen.dart';
+import 'package:elearning_events_app/views/screens/postulation/posts_list_screen.dart';
+import 'package:elearning_events_app/views/screens/notifications/notifications_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -13,9 +22,11 @@ import 'views/screens/events/event_details_screen.dart';
 import 'views/screens/schedule/schedule_screen.dart';
 import 'views/screens/profile/profile_screen.dart';
 import 'views/screens/home/home_screen.dart';
-
+import 'package:flutter_stripe/flutter_stripe.dart';
+import 'providers/wallet_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  Stripe.publishableKey = 'pk_test_51SQ87HHhwklufEWKb3ROAt3YttLpn2Wm7OxbsD3C45wkhBTMGEc9FoiLCzJClSIif9eZPuFpWJYQ3yuMkoBElRLz00TUgCYGL4';
   await DatabaseHelper.instance.database;
   runApp(const MyApp());
 }
@@ -29,6 +40,12 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => EventsProvider()),
+        ChangeNotifierProvider(create: (_) => WalletProvider()),
+        ChangeNotifierProvider(create: (_) => QuizzesProvider()),
+        ChangeNotifierProvider(create: (_) => QuestionsProvider()),
+        ChangeNotifierProvider(create: (_) => PostsProvider()),
+        ChangeNotifierProvider(create: (_) => CommentsProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationsProvider()),
       ],
       child: MaterialApp(
         title: 'E-Learning Events',
@@ -42,9 +59,13 @@ class MyApp extends StatelessWidget {
           AppRoute.signUp: (_) => const SignUpScreen(),
           AppRoute.home: (_) => const HomeScreen(),
           AppRoute.events: (_) => const EventsScreen(),
+          AppRoute.postsList: (_) => const PostsListScreen(),
+          AppRoute.createPost: (_) => const CreatePostScreen(),
           AppRoute.eventDetails: (_) => const EventDetailsScreen(),
           AppRoute.schedule: (_) => const ScheduleScreen(),
           AppRoute.profile: (_) => const ProfileScreen(),
+          AppRoute.quizze: (_) => const QuizzesScreen(),
+          AppRoute.notifications: (_) => const NotificationsScreen(),
         },
       ),
     );

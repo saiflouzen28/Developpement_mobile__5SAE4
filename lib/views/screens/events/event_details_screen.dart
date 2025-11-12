@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:animate_do/animate_do.dart';import 'package:cached_network_image/cached_network_image.dart';
+import 'package:animate_do/animate_do.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-// --- NEW IMPORTS for flutter_map ---
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../providers/auth_provider.dart';
 import '../../../providers/events_provider.dart';
+import '../../../providers/wallet_provider.dart'; // Import Wallet Provider
 import '../../../models/event_model.dart';
 import '../../../core/constant/app_theme.dart';
 import '../../../core/constant/app_route.dart';
+import '../../../services/share_service.dart';
 
 class EventDetailsScreen extends StatefulWidget {
   const EventDetailsScreen({super.key});
@@ -22,9 +23,8 @@ class EventDetailsScreen extends StatefulWidget {
 }
 
 class _EventDetailsScreenState extends State<EventDetailsScreen> {
-  bool _isJoining = false;
+  bool _isProcessing = false; // Use a single flag for processing
   bool _isRegistered = false;
-  // REMOVED: _openLocation and GoogleMapController are no longer needed.
 
   @override
   void initState() {
@@ -34,7 +34,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     });
   }
 
-  // --- No changes needed for these data-handling methods ---
   Future<void> _checkRegistrationStatus() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final eventsProvider = Provider.of<EventsProvider>(context, listen: false);
@@ -54,65 +53,65 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     }
   }
 
-  Future<void> _handleJoinEvent() async {
+  // <<< THIS IS THE NEW METHOD THAT HANDLES COIN PAYMENT >>>
+  Future<void> _handlePurchaseAndJoinEvent() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final eventsProvider = Provider.of<EventsProvider>(context, listen: false);
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     if (!mounted) return;
     final event = ModalRoute.of(context)!.settings.arguments as Event;
+    final user = authProvider.user;
 
-    if (authProvider.user == null) {
+    if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please login to join events'),
-          backgroundColor: AppTheme.errorColor,
-        ),
+        const SnackBar(content: Text('Please login to join events'), backgroundColor: AppTheme.errorColor),
       );
       return;
     }
 
-    if (event.isFull) {
+    // 1. Check coin balance
+    if (walletProvider.coins < event.coinPrice) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('This event is already full'),
-          backgroundColor: AppTheme.errorColor,
-        ),
+        SnackBar(content: Text('Not enough coins! You need ${event.coinPrice}.'), backgroundColor: AppTheme.errorColor),
       );
       return;
     }
 
-    setState(() => _isJoining = true);
+    setState(() => _isProcessing = true);
 
-    final success = await eventsProvider.joinEvent(
-      authProvider.user!.id!,
-      event.id!,
-    );
+    // 2. Spend coins
+    final paymentSuccess = walletProvider.spendCoins(event.coinPrice);
 
-    if (mounted) {
-      setState(() => _isJoining = false);
-    }
-
-    if (success) {
-      if (authProvider.user != null) {
-        eventsProvider.getUserEvents(authProvider.user!.id!);
-      }
-      if (mounted) {
-        setState(() => _isRegistered = true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Successfully joined the event!'),
-            backgroundColor: AppTheme.successColor,
-          ),
-        );
+    if (paymentSuccess) {
+      // 3. If payment succeeds, join event
+      final joinSuccess = await eventsProvider.joinEvent(user, event);
+      if (joinSuccess) {
+        // Also refresh the user's event list for the schedule page
+        await Provider.of<EventsProvider>(context, listen: false).getUserEvents(user.id!);
+        if (mounted) {
+          setState(() => _isRegistered = true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Success! Joined for ${event.coinPrice} coins.'), backgroundColor: AppTheme.successColor),
+          );
+        }
+      } else {
+        // If joining fails for some reason, refund the coins
+        walletProvider.addCoins(event.coinPrice);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to join. You may already be registered.'), backgroundColor: AppTheme.errorColor),
+          );
+        }
       }
     } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to join event. You may already be registered.'),
-            backgroundColor: AppTheme.errorColor,
-          ),
-        );
-      }
+      // This case should not happen if the check above works, but as a fallback:
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Payment failed. Please try again.'), backgroundColor: AppTheme.errorColor),
+      );
+    }
+
+    if (mounted) {
+      setState(() => _isProcessing = false);
     }
   }
 
@@ -122,40 +121,39 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     if (!mounted) return;
     final event = ModalRoute.of(context)!.settings.arguments as Event;
 
-    setState(() => _isJoining = true);
+    setState(() => _isProcessing = true);
 
     final success = await eventsProvider.leaveEvent(
       authProvider.user!.id!,
       event.id!,
     );
 
-    if (mounted) {
-      setState(() => _isJoining = false);
-    }
-
     if (success) {
-      if (authProvider.user != null) {
-        eventsProvider.getUserEvents(authProvider.user!.id!);
-      }
+      // Also refresh the user's event list for the schedule page
+      await Provider.of<EventsProvider>(context, listen: false).getUserEvents(authProvider.user!.id!);
       if (mounted) {
         setState(() => _isRegistered = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Successfully left the event'),
-            backgroundColor: AppTheme.warningColor,
-          ),
+          const SnackBar(content: Text('Successfully left the event'), backgroundColor: AppTheme.warningColor),
         );
       }
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to leave event'),
-            backgroundColor: AppTheme.errorColor,
-          ),
+          const SnackBar(content: Text('Failed to leave event'), backgroundColor: AppTheme.errorColor),
         );
       }
     }
+
+    if (mounted) {
+      setState(() => _isProcessing = false);
+    }
+  }
+
+  Future<void> _handleShareEvent() async {
+    if (!mounted) return;
+    final event = ModalRoute.of(context)!.settings.arguments as Event;
+    await ShareService.shareEvent(event);
   }
 
   @override
@@ -164,279 +162,295 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          // Hero image
-          SliverAppBar(
-            expandedHeight: 300,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Hero(
-                tag: 'event-${event.id}',
-                child: event.imageUrl != null
-                    ? CachedNetworkImage(
-                  imageUrl: event.imageUrl!,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Shimmer.fromColors(
-                    baseColor: Colors.grey[300]!,
-                    highlightColor: Colors.grey[100]!,
-                    child: Container(color: Colors.white),
-                  ),
-                  errorWidget: (context, url, error) => Container(
+      // The body of the screen is now wrapped in a WillPopScope
+      // to handle the Android back button correctly with the bottom nav bar.
+      body: WillPopScope(
+        onWillPop: () async {
+          // When the back button is pressed, navigate to the main events screen
+          // instead of just popping the context.
+          Navigator.pushReplacementNamed(context, AppRoute.events);
+          // Return false to prevent the default pop behavior.
+          return false;
+        },
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              expandedHeight: 300,
+              pinned: true,
+              // Overwrite the default back arrow to navigate correctly
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.pushReplacementNamed(context, AppRoute.events),
+              ),
+              flexibleSpace: FlexibleSpaceBar(
+                background: Hero(
+                  tag: 'event-${event.id}',
+                  child: event.imageUrl != null
+                      ? CachedNetworkImage(
+                    imageUrl: event.imageUrl!,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Shimmer.fromColors(
+                      baseColor: Colors.grey[300]!,
+                      highlightColor: Colors.grey[100]!,
+                      child: Container(color: Colors.white),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      child: const Icon(Icons.event, size: 80, color: AppTheme.primaryColor),
+                    ),
+                  )
+                      : Container(
                     color: AppTheme.primaryColor.withOpacity(0.1),
                     child: const Icon(Icons.event, size: 80, color: AppTheme.primaryColor),
                   ),
-                )
-                    : Container(
-                  color: AppTheme.primaryColor.withOpacity(0.1),
-                  child: const Icon(Icons.event, size: 80, color: AppTheme.primaryColor),
                 ),
               ),
             ),
-          ),
-          // Content
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Category and title
-                  FadeInUp(
-                    duration: const Duration(milliseconds: 600),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            event.category,
-                            style: const TextStyle(
-                              color: AppTheme.primaryColor,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FadeInUp(
+                      duration: const Duration(milliseconds: 600),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              event.category,
+                              style: const TextStyle(
+                                color: AppTheme.primaryColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          event.title,
-                          style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                      ],
+                          const SizedBox(height: 12),
+                          Text(
+                            event.title,
+                            style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Event details section
-                  FadeInUp(
-                    duration: const Duration(milliseconds: 600),
-                    delay: const Duration(milliseconds: 100),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Event Details',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 16),
-                        _buildDetailRow(
-                          icon: Icons.calendar_today,
-                          title: 'Date & Time',
-                          subtitle: event.eventDateTime,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // --- UPDATED MAP SECTION ---
-                        // Conditionally shows the map if coordinates exist
-                        if (event.latitude != null && event.longitude != null)
-                          _buildOpenStreetMapSection(event)
-                        else
+                    const SizedBox(height: 24),
+                    FadeInUp(
+                      duration: const Duration(milliseconds: 600),
+                      delay: const Duration(milliseconds: 100),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Event Details',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 16),
                           _buildDetailRow(
-                            icon: Icons.location_on,
-                            title: 'Location',
-                            subtitle: event.location, // Fallback to text if no coordinates
+                            icon: Icons.calendar_today,
+                            title: 'Date & Time',
+                            subtitle: event.eventDateTime,
                           ),
-
-                        const SizedBox(height: 16),
-                        _buildDetailRow(
-                          icon: Icons.people,
-                          title: 'Available Seats',
-                          subtitle: '${event.availableSeats} of ${event.maxParticipants} remaining',
-                        ),
-                        const SizedBox(height: 16),
-                        // Registration Progress bar
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Registration Progress',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                          const SizedBox(height: 16),
+                          if (event.latitude != null && event.longitude != null)
+                            _buildOpenStreetMapSection(event)
+                          else
+                            _buildDetailRow(
+                              icon: Icons.location_on,
+                              title: 'Location',
+                              subtitle: event.location,
                             ),
-                            const SizedBox(height: 8),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: LinearProgressIndicator(
-                                value: event.progress,
-                                backgroundColor: Colors.grey[200],
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  event.hasAvailableSeats ? AppTheme.successColor : AppTheme.errorColor,
-                                ),
-                                minHeight: 8,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${event.currentParticipants} registered, ${event.availableSeats} spots left',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: event.hasAvailableSeats ? AppTheme.successColor : AppTheme.errorColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // "About this event" description
-                  FadeInUp(
-                    duration: const Duration(milliseconds: 600),
-                    delay: const Duration(milliseconds: 200),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'About This Event',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          event.description,
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.6),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // Action buttons
-                  FadeInUp(
-                    duration: const Duration(milliseconds: 600),
-                    delay: const Duration(milliseconds: 300),
-                    child: Column(
-                      children: [
-                        // All button logic remains the same
-                        if (authProvider.user == null)
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.pushNamed(context, AppRoute.signIn);
-                              },
-                              child: const Text('Login to Join Event'),
-                            ),
-                          )
-                        else if (_isRegistered)
-                          Row(
+                          const SizedBox(height: 16),
+                          _buildDetailRow(
+                            icon: Icons.people,
+                            title: 'Available Seats',
+                            subtitle: '${event.availableSeats} of ${event.maxParticipants} remaining',
+                          ),
+                          const SizedBox(height: 16),
+                          // <<< NEW WIDGET TO SHOW THE PRICE >>>
+                          _buildDetailRow(
+                            icon: Icons.monetization_on,
+                            title: 'Price',
+                            subtitle: '${event.coinPrice} coins',
+                          ),
+                          const SizedBox(height: 16),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: _isJoining ? null : _handleLeaveEvent,
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: AppTheme.errorColor,
-                                    side: const BorderSide(color: AppTheme.errorColor, width: 2),
+                              Text(
+                                'Registration Progress',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 8),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: LinearProgressIndicator(
+                                  value: event.progress,
+                                  backgroundColor: Colors.grey[200],
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    event.hasAvailableSeats ? AppTheme.successColor : AppTheme.errorColor,
                                   ),
-                                  child: _isJoining
-                                      ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.errorColor),
-                                    ),
-                                  )
-                                      : const Text('Leave Event'),
+                                  minHeight: 8,
                                 ),
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: null,
-                                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.successColor),
-                                  child: const Text('Already Joined ✓'),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${event.currentParticipants} registered, ${event.availableSeats} spots left',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: event.hasAvailableSeats ? AppTheme.successColor : AppTheme.errorColor,
                                 ),
                               ),
                             ],
-                          )
-                        else
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    FadeInUp(
+                      duration: const Duration(milliseconds: 600),
+                      delay: const Duration(milliseconds: 200),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'About This Event',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            event.description,
+                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.6),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    FadeInUp(
+                      duration: const Duration(milliseconds: 600),
+                      delay: const Duration(milliseconds: 300),
+                      child: Column(
+                        children: [
+                          if (authProvider.user == null)
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.pushNamed(context, AppRoute.signIn);
+                                },
+                                child: const Text('Login to Join Event'),
+                              ),
+                            )
+                          else if (_isRegistered)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: _isProcessing ? null : _handleLeaveEvent,
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppTheme.errorColor,
+                                      side: const BorderSide(color: AppTheme.errorColor, width: 2),
+                                    ),
+                                    child: _isProcessing
+                                        ? const SizedBox(
+                                      height: 20, width: 20,
+                                      child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(AppTheme.errorColor)),
+                                    )
+                                        : const Text('Leave Event'),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: null,
+                                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.successColor),
+                                    child: const Text('Already Joined ✓'),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                // <<< USE THE NEW PURCHASE METHOD >>>
+                                onPressed: event.isFull || _isProcessing ? null : _handlePurchaseAndJoinEvent,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: event.isFull ? AppTheme.errorColor : AppTheme.primaryColor,
+                                ),
+                                child: _isProcessing
+                                    ? const SizedBox(
+                                  height: 20, width: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                                )
+                                // <<< UPDATE BUTTON TEXT TO SHOW PRICE >>>
+                                    : Text(event.isFull ? 'Event Full' : 'Join for ${event.coinPrice} Coins'),
+                              ),
+                            ),
+                          const SizedBox(height: 12),
                           SizedBox(
                             width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: event.isFull || _isJoining ? null : _handleJoinEvent,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: event.isFull ? AppTheme.errorColor : AppTheme.primaryColor,
+                            child: OutlinedButton.icon(
+                              onPressed: _handleShareEvent,
+                              icon: const Icon(Icons.share),
+                              label: const Text('Share Event'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppTheme.primaryColor,
+                                side: BorderSide(color: AppTheme.primaryColor.withOpacity(0.5)),
                               ),
-                              child: _isJoining
-                                  ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
-                                  : Text(event.isFull ? 'Event Full' : 'Join Event'),
                             ),
                           ),
-                        const SizedBox(height: 12),
-                        // Share button
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Share feature coming soon!')),
-                              );
-                            },
-                            icon: const Icon(Icons.share),
-                            label: const Text('Share Event'),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 32),
-                ],
+                    const SizedBox(height: 32),
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
+        ),
+      ),
+      // <<< ADD THE BOTTOM NAVIGATION BAR >>>
+      bottomNavigationBar: BottomNavigationBar(
+        // The current index is 0 because this screen is part of the "Events" flow.
+        currentIndex: 0,
+        onTap: (index) {
+          switch (index) {
+            case 0:
+            // If already on events flow, do nothing or go to main events screen
+              Navigator.pushReplacementNamed(context, AppRoute.events);
+              break;
+            case 1:
+              Navigator.pushReplacementNamed(context, AppRoute.schedule);
+              break;
+            case 2:
+              Navigator.pushReplacementNamed(context, AppRoute.profile);
+              break;
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.event), label: 'Events'),
+          BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'Schedule'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );
   }
 
-  // --- NEW WIDGET FOR THE OPENSTREETMAP VIEW ---
   Widget _buildOpenStreetMapSection(Event event) {
+    // This method is unchanged
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Location',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
+        Text( 'Location', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        Text(
-          event.location,
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
+        Text(event.location, style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 12),
         SizedBox(
           height: 200,
@@ -451,7 +465,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
               children: [
                 TileLayer(
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.example.filmpro', // Important for package guidelines
+                  userAgentPackageName: 'com.example.filmpro',
                 ),
                 MarkerLayer(
                   markers: [
@@ -459,20 +473,13 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                       point: LatLng(event.latitude!, event.longitude!),
                       width: 50,
                       height: 50,
-                      child: const Icon(
-                        Icons.location_pin,
-                        size: 50,
-                        color: AppTheme.errorColor, // Make marker stand out
-                      ),
+                      child: const Icon(Icons.location_pin, size: 50, color: AppTheme.errorColor),
                     ),
                   ],
                 ),
                 RichAttributionWidget(
                   attributions: [
-                    TextSourceAttribution(
-                      'OpenStreetMap contributors',
-                      onTap: () => launchUrl(Uri.parse('https://openstreetmap.org/copyright')),
-                    ),
+                    TextSourceAttribution( 'OpenStreetMap contributors', onTap: () => launchUrl(Uri.parse('https://openstreetmap.org/copyright'))),
                   ],
                 ),
               ],
@@ -483,7 +490,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  // Kept for other detail rows
   Widget _buildDetailRow({
     required IconData icon,
     required String title,
@@ -491,11 +497,12 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     VoidCallback? onTap,
     bool showArrow = false,
   }) {
+    // This method is unchanged
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4.0), // Reduced padding slightly
+        padding: const EdgeInsets.symmetric(vertical: 4.0),
         child: Row(
           children: [
             Container(
@@ -526,8 +533,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 ],
               ),
             ),
-            if (showArrow)
-              const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+            if (showArrow) const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
           ],
         ),
       ),

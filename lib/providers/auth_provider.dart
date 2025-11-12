@@ -1,7 +1,7 @@
 // lib/providers/auth_provider.dart
 
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // 1. Import shared_preferences
+import 'package:shared_preferences/shared_preferences.dart';
 import '../database/database_helper.dart';
 import '../models/user_model.dart';
 
