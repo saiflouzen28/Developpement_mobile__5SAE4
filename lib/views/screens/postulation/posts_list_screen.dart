@@ -756,18 +756,7 @@ class _ModernPostCardState extends State<ModernPostCard> {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        Icon(Icons.calendar_today_outlined, size: 14, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            _formatDate(widget.post.date),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[700],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
+
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -812,19 +801,7 @@ class _ModernPostCardState extends State<ModernPostCard> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    // Share
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        Icons.link_rounded,
-                        size: 18,
-                        color: Colors.green,
-                      ),
-                    ),
+                    // Shar
                   ],
                 ),
               ),
@@ -949,16 +926,7 @@ class _ModernPostListCardState extends State<ModernPostListCard> {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            Icon(Icons.calendar_today_outlined, size: 14, color: Colors.grey[600]),
-                            const SizedBox(width: 4),
-                            Text(
-                              widget.post.formattedDate,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey[700],
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
+
                           ],
                         ),
                         const SizedBox(height: 12),
@@ -1022,18 +990,7 @@ class _ModernPostListCardState extends State<ModernPostListCard> {
                             ),
                             const SizedBox(width: 4),
                             // Share
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                              decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.12),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(
-                                Icons.link_rounded,
-                                size: 18,
-                                color: Colors.green,
-                              ),
-                            ),
+
                           ],
                         ),
                       ],

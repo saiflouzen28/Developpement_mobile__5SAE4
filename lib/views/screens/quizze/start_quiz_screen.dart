@@ -906,7 +906,7 @@ class _StartQuizScreenState extends State<StartQuizScreen> {
                                 const Icon(Icons.save_rounded, size: 24),
                                 const SizedBox(width: 12),
                                 const Text(
-                                  'Enregistrer le résultat',
+                                  'Enregistrer',
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
@@ -1243,9 +1243,7 @@ class _StartQuizScreenState extends State<StartQuizScreen> {
 
                       // Question Card (Scrollable for long questions)
                       Container(
-                        constraints: const BoxConstraints(
-                          maxHeight: 280, // Limit height so options are visible
-                        ),
+                        height: 200, // Fixed height so options always visible
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [Colors.purple.shade400, Colors.blue.shade400],
@@ -1263,6 +1261,7 @@ class _StartQuizScreenState extends State<StartQuizScreen> {
                         ),
                         child: SingleChildScrollView(
                           padding: const EdgeInsets.all(24),
+                          physics: const BouncingScrollPhysics(),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [

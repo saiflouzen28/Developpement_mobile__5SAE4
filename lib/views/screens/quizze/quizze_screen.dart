@@ -644,7 +644,7 @@ class _QuizzesScreenState extends State<QuizzesScreen> {
                           Icon(Icons.quiz_rounded, color: Colors.white, size: 28),
                           SizedBox(width: 12),
                           Text(
-                            'Create New Quiz',
+                            'New Quiz',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 22,
@@ -737,10 +737,10 @@ class _QuizzesScreenState extends State<QuizzesScreen> {
                         items: [
                           'Technology',
                           'Design',
-                          'Marketing',
+                          'Market',
                           'Science',
                           'AI',
-                          'Web Development'
+                          'Web '
                         ].map((category) => DropdownMenuItem(
                               value: category,
                               child: Text(category),
@@ -1089,7 +1089,7 @@ class _QuizzesScreenState extends State<QuizzesScreen> {
                           children: const [
                             Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 28),
                             SizedBox(width: 12),
-                            Text('Create Quiz with AI', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white)),
+                            Text('Quiz with AI', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: Colors.white)),
                           ],
                         ),
                       ),
@@ -1166,7 +1166,7 @@ class _QuizzesScreenState extends State<QuizzesScreen> {
                         decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.purple.shade200)),
                         child: DropdownButtonFormField<String>(
                           value: selectedCategory,
-                          items: ['Technology','Design','Marketing','Science','AI','Web Development']
+                          items: ['Technology','Design','Marketing','Science','AI','Web']
                               .map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                           onChanged: (v) => setState(() => selectedCategory = v!),
                           decoration: InputDecoration(labelText: 'Category', labelStyle: TextStyle(color: Colors.purple.shade700), prefixIcon: Icon(Icons.category_rounded, color: Colors.purple.shade400), border: InputBorder.none),

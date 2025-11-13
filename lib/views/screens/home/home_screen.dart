@@ -284,11 +284,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             _buildDrawerItem(icon: Icons.school_outlined, title: 'Courses', onTap: () => Navigator.pushNamed(context, AppRoute.courses)),
             _buildDrawerItem(
-              icon: Icons.event_note_outlined,
-              title: 'Events',
-              onTap: () => Navigator.pushNamed(context, AppRoute.events),
-            ),
-            _buildDrawerItem(
               icon: Icons.casino,
               title: 'Games',
               onTap: () => Navigator.push(
@@ -371,7 +366,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       _buildCategoryIcon(
                         context,
-                        'Virtual Room',
+                        'Room',
                         Icons.people_alt,
                         Colors.purple,
                             () {
@@ -386,7 +381,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       _buildCategoryIcon(context, 'Courses', Icons.school, AppTheme.primaryColor, () => Navigator.pushNamed(context, AppRoute.courses)),
                       _buildCategoryIcon(context, 'Events', Icons.event, AppTheme.successColor, () => Navigator.pushNamed(context, AppRoute.events)),
                       _buildCategoryIcon(context, 'Quizzes', Icons.quiz, AppTheme.warningColor, () => Navigator.pushNamed(context, AppRoute.quizze)),
-                      _buildCategoryIcon(context, 'Postulation', Icons.article, AppTheme.accentColor, () => Navigator.pushNamed(context, AppRoute.postsList)),
+                      _buildCategoryIcon(context, 'Post', Icons.article, AppTheme.accentColor, () => Navigator.pushNamed(context, AppRoute.postsList)),
                       _buildCategoryIcon(context, 'packs', Icons.event, AppTheme.successColor, () => Navigator.pushNamed(context, AppRoute.PackStoreScreen)),
 
                     ],
